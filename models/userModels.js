@@ -2,6 +2,10 @@ import mongoose from 'mongoose';
 
 const userSchema = mongoose.Schema({
 
+    _id: {
+        type: String,
+        required: true
+    },
     username: {
         type: String,
         required: true
@@ -31,6 +35,10 @@ const userSchema = mongoose.Schema({
             type: String
         }
     }]
-});
+},
+{
+    timestamps: true
+}
+);
 
 export default mongoose.model("User", userSchema);
