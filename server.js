@@ -6,12 +6,14 @@ import cors from 'cors';
 import admin from 'firebase-admin';
 import fs from 'fs';
 import userRoutes from './routes/userRoutes.js';
+import widgetRoutes from './routes/widgetRoutes.js';
+
 
 const credentials = JSON.parse(fs.readFileSync('./firebaseKey/salezy-4de15-firebase-adminsdk-vql86-b2b376decd.json'))
 
 admin.initializeApp({
     credential: admin.credential.cert(credentials)
-})
+});
 
 dotenv.config();
 
@@ -30,6 +32,8 @@ app.use(helmet());
 
 // User routes
 app.use('/user', userRoutes);
+// Widget routes
+app.use('/widget',express.static('template'), widgetRoutes);
 
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
