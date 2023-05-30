@@ -36,8 +36,8 @@ class SalezyWidget {
      */
 
     const container = document.createElement("div");
-    container.classList.add("salezy-widget__container")
     container.style.position = "fixed";
+    container.style.zIndex = "20";
     Object.keys(this.position).forEach(
       (key) => (container.style[key] = this.position[key])
     );
@@ -47,7 +47,7 @@ class SalezyWidget {
      * Button element with the class button__container
      */
     const buttonContainer = document.createElement("button");
-    buttonContainer.classList.add("button__container");
+    buttonContainer.classList.add("widget-button__container");
 
     /**
      * Span element for the Icon
@@ -146,6 +146,7 @@ class SalezyWidget {
 
     const supportPage = document.createElement("form")
     supportPage.classList.add("hidden") 
+    supportPage.classList.add("widget-support__form")
     supportPage.innerHTML = `
       <div class="form__field">
         <input
@@ -323,8 +324,9 @@ class SalezyWidget {
    * Get the visitor info once it loads up
    */
   async loadUp(){
-    // this will be the load up function of the widget
-    // -> go check for the widget state in the server
+    // When the widget load up it will create a new visitor with the navigator.userAgent
+    // -> when this visitor decide to interact with the widget he will have to give his email
+    // -> This visitor will be deleted and a new visitor object will created with the email given
     const widgetStateStored = localStorage.getItem('state-widget');
 
     if(widgetStateStored) {
@@ -351,3 +353,6 @@ const initializeWidget = () => {
 }
 
 initializeWidget();
+
+
+

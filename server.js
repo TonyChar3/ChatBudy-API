@@ -8,7 +8,6 @@ import fs from 'fs';
 import userRoutes from './routes/userRoutes.js';
 import widgetRoutes from './routes/widgetRoutes.js';
 
-
 const credentials = JSON.parse(fs.readFileSync('./firebaseKey/salezy-4de15-firebase-adminsdk-vql86-b2b376decd.json'))
 
 admin.initializeApp({
@@ -32,9 +31,12 @@ app.use(helmet());
 
 // User routes
 app.use('/user', userRoutes);
+
+app.use('/widget/:id', express.static('template'));
+
 // Widget routes
-app.use('/widget',express.static('template'), widgetRoutes);
+app.use('/widget', widgetRoutes);
 
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
-})
+});

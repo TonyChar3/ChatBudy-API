@@ -17,19 +17,15 @@ const userSchema = mongoose.Schema({
     },
     notifications: [{
         _id: {
-            type: String,
-            required: true,
-            unique: true
+            type: String
         },
         text: {
-            type: String,
-            required: true
+            type: String
         }
     }],
     visitors: [{
         _id: {
-            type: String,
-            unique: true
+            type: String
         },
         email: {
             type: String

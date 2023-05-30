@@ -1,5 +1,6 @@
 import asyncHandler from 'express-async-handler';
 import User from '../models/userModels.js';
+import Widget from '../models/widgetModels.js';
 import admin from 'firebase-admin';
 
 //@desc Register a new User
@@ -8,6 +9,7 @@ import admin from 'firebase-admin';
 const registerUser = asyncHandler(async(req,res,next) => {
     try{
         const token = req.headers.authorization.split(' ')[1]
+        const { web_url } = req.body
 
         const decodedToken = await admin.auth().verifyIdToken(token)
 
@@ -21,9 +23,15 @@ const registerUser = asyncHandler(async(req,res,next) => {
                     _id: data.uid,
                     username: data.displayName,
                     email: data.email,
-                })
+                });
 
-                if(user){
+                // create the user widget
+                const widget = await Widget.create({
+                    _id: data.uid,
+                    domain: web_url
+                });
+
+                if(user && widget){
                     res.status(200).json({ message: "Welcome to the Salezy App"})
                 } else {
                     res.status(500);

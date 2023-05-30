@@ -1,10 +1,10 @@
 import express from 'express';
-import { initializeWidget } from '../controllers/widgetControllers.js';
+import { initializeWidget, widgetCustomLink } from '../controllers/widgetControllers.js';
 import { VerifyToken } from '../middleware/authHandle.js';
 const router = express.Router();
 
-// router.use(VerifyToken);
+router.get('/link', VerifyToken, widgetCustomLink);
 
-router.get('/main.js', initializeWidget);
+router.get('/:id', initializeWidget);
 
 export default router;

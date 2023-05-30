@@ -3,7 +3,7 @@ export const styles = `
     .widget__content * {
         box-sizing: border-box;
         scroll-behavior: smooth;
-    }        
+    }  
     .widget__content h3, p, input {
         margin: 0;
         padding: 0;
@@ -28,30 +28,30 @@ export const styles = `
     .content__hidden {
         transform: scale(0);
     }
-    .button__container {
+    .widget-button__container {
+        position: relative;
         border: none;
         width: 60px;
         height: 60px;
-        z-index: 10;
         border-radius: 50%;
         cursor: pointer;
         background-color: #0c64f2;
     }
-    .button__container:hover {
+    .widget-button__container:hover {
         transform: scale(1.1);
         transition-duration: .2s;
         transition-timing-function: ease-in-out;
     }
-    .button__container:active {
+    .widget-button__container:active {
         transform: scale(0.9);
         transition-duration: .1s;
         transition-timing-function: ease-in-out;
     }
-    .button__container > i {
+    .widget-button__container > i {
         font-size: 5rem;
     }
     @media (min-width: 1024px) {
-        .button__container {
+        .widget-button__container {
           width: 70px;
           height: 70px;
         }
@@ -62,7 +62,7 @@ export const styles = `
     form.hidden {
         display: none
     }
-    .widget__content .widget__header {
+    .widget__header {
         padding: 1rem 2rem 1.5rem;
         color: #fff;
         border-radius: 15px;
@@ -98,13 +98,12 @@ export const styles = `
         align-items: start;
     }
     .widget__content {
-        width: 370px;
+        width: 390px;
         height: auto;
         max-width: 400px;
         right: -26px;
         bottom: 40px;
         position: absolute;
-        z-index: -10;
         transition: transform .2s ease-in-out;
         border-radius: 15px;
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.1); 
@@ -129,8 +128,8 @@ export const styles = `
         font-size: 1.05rem;
         color: white;
     }
-    form {
-        height: 350px;
+    .widget-support__form {
+        height: 100%;
         width: 100%;
         display: flex;
         flex-direction: column;
@@ -138,7 +137,7 @@ export const styles = `
         transition: transform .2s ease;
         padding: 1em;
         background-color: white;
-        box-sizing: border-box;
+        border-radius: 15px;
     }
     form .form__field {
         margin-bottom: 1.5em;
@@ -168,7 +167,7 @@ export const styles = `
     .form__field textarea:hover {
         border: 1px solid #0c64f2;
         background-color: white;
-        transform:scale(1.1);
+        transform: scale(1.04);
         transition: transform .2s ease;
     }
     .form__field input {
@@ -199,12 +198,13 @@ export const styles = `
     }
     .chatroom__wrapper {
         font-family: 'Noto Sans', sans-serif;
-        height: 350px;
+        height: 390px;
         width: 100%;
         display: flex;
         flex-direction: column;
         transition: transform .2s ease;
         background-color: white;
+        border-radius: 15px;
     }
     .chatroom__container {
         height: 90%;

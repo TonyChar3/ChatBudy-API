@@ -1,7 +1,8 @@
 import asyncHandler from 'express-async-handler';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import Widget from '../models/widgetModels.js';
+import admin from 'firebase-admin';
 
 //@desc To get the widget
 //@route GET /widget/chat-widget
@@ -9,20 +10,42 @@ import { fileURLToPath } from 'url';
 const initializeWidget = asyncHandler( async(req,res,next) => {
 
     try{
-        const __filename = fileURLToPath(import.meta.url);
-        const __dirname = path.dirname(__filename);
+        const { id } = req.params;
 
-        const widgetPath = path.join('template', 'main.js');
+        const domainWidget = await Widget.findById(id);
+        if(!domainWidget){
+            res.status(404);
+            throw new Error("Widget domain not found");
+        } else {
+            const widgetPath = path.join('template', 'main.js');
+            res.set('Content-Type', 'text/javascript');
+            res.set('Access-Control-Allow-Origin', `${domainWidget.domain}`);6
+            res.set('Access-Control-Allow-Credentials', 'true');
+            res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+            
+            fs.createReadStream(widgetPath).pipe(res);
+        }
 
-        res.set('Content-Type', 'text/javascript');
-        res.set('Access-Control-Allow-Origin', 'http://10.0.0.129:3000'); // Set the allowed origin
-        res.set('Access-Control-Allow-Credentials', 'true');
-        res.set('Cross-Origin-Resource-Policy', 'cross-origin');
-    
-        fs.createReadStream(widgetPath).pipe(res);
     } catch(err) {
         console.log(err)
+        next(err)
     }
 });
 
-export { initializeWidget }
+//@desc To give the script tag link to correct user
+const widgetCustomLink = asyncHandler(async(req,res,next) => {
+    try{
+        const token = req.headers.authorization.split(" ")[1]
+
+        const decodedToken = await admin.auth().verifyIdToken(token)
+
+        if(decodedToken){
+            res.status(200).json({ link: `<script type="module" src="http://localhost:8080/widget/${decodedToken.user_id}" async></script>`})
+        }
+    } catch(err){
+        console.log(err)
+        next(err)
+    }
+});
+
+export { initializeWidget, widgetCustomLink }
