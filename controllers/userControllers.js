@@ -2,6 +2,8 @@ import asyncHandler from 'express-async-handler';
 import User from '../models/userModels.js';
 import Widget from '../models/widgetModels.js';
 import admin from 'firebase-admin';
+import Visitors from '../models/visitorsModels.js';
+import { uniqueUserHash } from '../utils/manageVisitors.js';
 
 //@desc Register a new User
 //@route POST /user/register
@@ -9,29 +11,37 @@ import admin from 'firebase-admin';
 const registerUser = asyncHandler(async(req,res,next) => {
     try{
         const token = req.headers.authorization.split(' ')[1]
-        const { web_url } = req.body
+        const { web_url, username } = req.body
 
         const decodedToken = await admin.auth().verifyIdToken(token)
 
         if(decodedToken){
             // get the user data
             const data = await admin.auth().getUser(decodedToken.user_id)
-
-            if(data){
+            // generate a unique user hash
+            const u_hash = await uniqueUserHash();
+            if(data && u_hash){
+                
                 //create the user and insert it in the DB
                 const user = await User.create({
                     _id: data.uid,
-                    username: data.displayName,
+                    user_access: u_hash,
+                    username: username,
                     email: data.email,
                 });
 
                 // create the user widget
                 const widget = await Widget.create({
-                    _id: data.uid,
+                    _id: u_hash,
                     domain: web_url
                 });
 
-                if(user && widget){
+                // create the user visitors array in the Visitors collection
+                const visitors = await Visitors.create({
+                    _id: u_hash
+                });
+
+                if(user && widget && visitors){
                     res.status(200).json({ message: "Welcome to the Salezy App"})
                 } else {
                     res.status(500);

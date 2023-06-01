@@ -1,7 +1,8 @@
 import asyncHandler from 'express-async-handler';
-import fs from 'fs';
+import fs, { ReadStream } from 'fs';
 import path from 'path';
 import Widget from '../models/widgetModels.js';
+import User from '../models/userModels.js';
 import admin from 'firebase-admin';
 
 //@desc To get the widget
@@ -11,19 +12,28 @@ const initializeWidget = asyncHandler( async(req,res,next) => {
 
     try{
         const { id } = req.params;
-
         const domainWidget = await Widget.findById(id);
+
         if(!domainWidget){
             res.status(404);
             throw new Error("Widget domain not found");
         } else {
             const widgetPath = path.join('template', 'main.js');
             res.set('Content-Type', 'text/javascript');
-            res.set('Access-Control-Allow-Origin', `${domainWidget.domain}`);6
+            res.set('Access-Control-Allow-Origin', `${domainWidget.domain}`);
             res.set('Access-Control-Allow-Credentials', 'true');
             res.set('Cross-Origin-Resource-Policy', 'cross-origin');
             
-            fs.createReadStream(widgetPath).pipe(res);
+            const readStream = fs.createReadStream(widgetPath);
+            let widgetContent = '';
+
+            readStream.on('data', (chunk) => {
+                widgetContent += chunk.toString().replace('__HASH__', id)
+            });
+
+            readStream.on('end', () => {
+                res.send(widgetContent);
+            });
         }
 
     } catch(err) {
@@ -40,7 +50,12 @@ const widgetCustomLink = asyncHandler(async(req,res,next) => {
         const decodedToken = await admin.auth().verifyIdToken(token)
 
         if(decodedToken){
-            res.status(200).json({ link: `<script type="module" src="http://localhost:8080/widget/${decodedToken.user_id}" async></script>`})
+
+            const user = await User.findById(decodedToken.user_id);
+            if(!user){
+                res.status(500);
+            }
+            res.status(200).json({ link: `<script type="module" src="http://localhost:8080/widget/${user.user_access}" async></script>`})
         }
     } catch(err){
         console.log(err)

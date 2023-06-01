@@ -6,6 +6,10 @@ const userSchema = mongoose.Schema({
         type: String,
         required: true
     },
+    user_access: {
+        type: String,
+        required: true
+    },
     username: {
         type: String,
         required: true
@@ -20,14 +24,6 @@ const userSchema = mongoose.Schema({
             type: String
         },
         text: {
-            type: String
-        }
-    }],
-    visitors: [{
-        _id: {
-            type: String
-        },
-        email: {
             type: String
         }
     }]

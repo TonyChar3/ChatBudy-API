@@ -4,6 +4,7 @@ class SalezyWidget {
 
   constructor(position = "bottom-right") {
     this.position = this.getPosition(position);// save the position of the widget
+    this.widgetID = "__HASH__";// To identify the widget for each request he makes
     this.welcome = false;// state of the widget if the user want to give his email or not
     this.open = false;// the state of the widget Open/Close
     this.change = false;// state of the page to show in the widget
@@ -324,16 +325,43 @@ class SalezyWidget {
    * Get the visitor info once it loads up
    */
   async loadUp(){
+    // Use the local Storage to prevent from running everytime the user refresh the page
     // When the widget load up it will create a new visitor with the navigator.userAgent
     // -> when this visitor decide to interact with the widget he will have to give his email
-    // -> This visitor will be deleted and a new visitor object will created with the email given
-    const widgetStateStored = localStorage.getItem('state-widget');
+    // -> This visitor will be deleted and a new visitor object will created with the email give
 
-    if(widgetStateStored) {
-      const state = JSON.parse(widgetStateStored)
-      this.welcome = state;
-    } else {
-      this.welcome = false;
+    try{
+      if(!sessionStorage.getItem('widgetLoaded')){
+        const response = await fetch('http://localhost:8080/visitor/visitor-info')
+
+        if(response){
+          
+          const data = await response.json();
+          if(data){
+            const newVisitor = {
+              isoCode: data.info.country.iso_code,
+              browser: navigator.userAgent
+            }
+  
+            const visitor = await fetch(`http://localhost:8080/visitor/new-visitor-${this.widgetID}`,{
+              method: 'post',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(newVisitor)
+            });
+  
+            if(visitor) {
+              const visitor_data = await visitor.json();
+              if(visitor_data){
+                sessionStorage.setItem('widgetLoaded', true);
+              }
+            }
+          } 
+        }
+      }
+    } catch(err){
+        console.log(err)
     }
 
     // -> If nothing is there create a new state space for this browser in the db
@@ -344,7 +372,7 @@ class SalezyWidget {
       screenWidth: window.screen.width,
       screenHeight: window.screen.height
     }
-    console.log(navigator)
+    console.log(visitorData)
   }
 }
 

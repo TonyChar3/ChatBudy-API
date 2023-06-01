@@ -7,6 +7,7 @@ import admin from 'firebase-admin';
 import fs from 'fs';
 import userRoutes from './routes/userRoutes.js';
 import widgetRoutes from './routes/widgetRoutes.js';
+import visitorRoutes from './routes/visitorRoutes.js';
 
 const credentials = JSON.parse(fs.readFileSync('./firebaseKey/salezy-4de15-firebase-adminsdk-vql86-b2b376decd.json'))
 
@@ -36,6 +37,9 @@ app.use('/widget/:id', express.static('template'));
 
 // Widget routes
 app.use('/widget', widgetRoutes);
+
+//Visitors routes
+app.use('/visitor', visitorRoutes);
 
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
