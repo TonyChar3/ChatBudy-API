@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { uniqueVisitorID, getVisitorBrowser } from '../utils/manageVisitors.js';
 import Visitor from '../models/visitorsModels.js';
 import User from '../models/userModels.js';
+import admin from 'firebase-admin';
 
 dotenv.config();
 
@@ -68,26 +69,31 @@ const createVisitor = asyncHandler(async(req,res,next) => {
 //@access PRIVATE
 const fetchAllVisiotr = asyncHandler(async(req,res,next) => {
     try{
-        const { u_uid } = req.body;
+        const token = req.headers.authorization.split(' ')[1]
 
-        const user = await User.findById(u_uid)
-        if(!user){
-            res.status(500);
-            throw new Error("Unable to find your visitor array...please reload and try again")
-        }
+        const decodedToken = await admin.auth().verifyIdToken(token)
 
-        const visitor_array = await Visitor.findById(user.user_access);
-        if(!visitor_array){
-            res.status(500);
-            throw new Error("Unable to find your visitor array...please reload and try again")
-        }
-
-        if(visitor_array.visitor.length === 0) {
-            res.send({ message: "No visitors"})
-        } else {
-            visitor_array.visitor.forEach(element => {
-                res.send(element)
-            });
+        if(decodedToken){
+            const user = await User.findById(decodedToken.uid)
+            if(!user){
+                res.status(500);
+                throw new Error("Unable to find your visitor array...please reload and try again")
+            }
+    
+            const visitor_array = await Visitor.findById(user.user_access);
+            if(!visitor_array){
+                res.status(500);
+                throw new Error("Unable to find your visitor array...please reload and try again")
+            }
+    
+            if(visitor_array.visitor.length === 0) {
+                res.send({ message: "No visitors"})
+            } else {
+                const elements = visitor_array.visitor.map(elemt => {
+                    return elemt
+                });
+                res.send(elements);
+            }
         }
     } catch(err){
         next(err);
@@ -99,7 +105,23 @@ const fetchAllVisiotr = asyncHandler(async(req,res,next) => {
 //@access PRIVATE
 const deleteVisitor = asyncHandler( async(req,res,next) => {
     try{
-        res.json({ message: "User deleted" });
+        // will need the user hash + the visitor _id
+        const { u_hash, visitor_id } = req.body;
+        console.log(req.body)
+        // find the visitor object in the collection
+        const user_visitors = await Visitor.findById(u_hash);
+        if(!user_visitors){
+            res.status(500);
+        }
+        // loop through the visitor array and check for the matching _id
+        const visitor_index = user_visitors.visitor.findIndex(visitr => visitr._id.toString() === visitor_id.toString())
+        if(visitor_index !== -1){
+            user_visitors.visitor.splice(visitor_index, 1);
+            await user_visitors.save();
+            res.status(200).json({ message: "Visitor removed" });
+        } else {
+            res.status(404);
+        }
     } catch(err){   
         next(err);
     }
