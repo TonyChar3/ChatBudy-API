@@ -5,6 +5,7 @@ import { uniqueVisitorID, getVisitorBrowser } from '../utils/manageVisitors.js';
 import Visitor from '../models/visitorsModels.js';
 import User from '../models/userModels.js';
 import admin from 'firebase-admin';
+import { sendUpdateToUser } from '../controllers/sseControllers.js';
 
 dotenv.config();
 
@@ -42,7 +43,7 @@ const createVisitor = asyncHandler(async(req,res,next) => {
         const visitor_browser = await getVisitorBrowser(browser);
        
         if(uid && visitor && visitor_browser) {
-            console.log(visitor_browser)
+            
             const newVisitor = {
                 _id: uid,
                 country: isoCode,
@@ -87,12 +88,11 @@ const fetchAllVisiotr = asyncHandler(async(req,res,next) => {
             }
     
             if(visitor_array.visitor.length === 0) {
-                res.send({ message: "No visitors"})
+                sendUpdateToUser(user._id, [{ message: "No visitors" }]);
+                res.send({ message: "No visitors"});
             } else {
-                const elements = visitor_array.visitor.map(elemt => {
-                    return elemt
-                });
-                res.send(elements);
+                sendUpdateToUser(user.uid, visitor_array.visitor);
+                res.status(201);
             }
         }
     } catch(err){
@@ -107,18 +107,23 @@ const deleteVisitor = asyncHandler( async(req,res,next) => {
     try{
         // will need the user hash + the visitor _id
         const { u_hash, visitor_id } = req.body;
-        console.log(req.body)
+        
+        const userUID = await User.findOne({ user_access: u_hash })
         // find the visitor object in the collection
         const user_visitors = await Visitor.findById(u_hash);
-        if(!user_visitors){
+        if(!user_visitors || !userUID){
             res.status(500);
         }
         // loop through the visitor array and check for the matching _id
         const visitor_index = user_visitors.visitor.findIndex(visitr => visitr._id.toString() === visitor_id.toString())
         if(visitor_index !== -1){
             user_visitors.visitor.splice(visitor_index, 1);
-            await user_visitors.save();
-            res.status(200).json({ message: "Visitor removed" });
+            const save = await user_visitors.save();
+            if(save){
+                sendUpdateToUser(userUID, user_visitors.visitor)
+                res.status(200).json({ message: "Visitor removed" });
+            }
+            
         } else {
             res.status(404);
         }

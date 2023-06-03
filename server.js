@@ -8,6 +8,8 @@ import fs from 'fs';
 import userRoutes from './routes/userRoutes.js';
 import widgetRoutes from './routes/widgetRoutes.js';
 import visitorRoutes from './routes/visitorRoutes.js';
+import sseRoute from './routes/sseRoute.js';
+import session from 'express-session';
 
 const credentials = JSON.parse(fs.readFileSync('./firebaseKey/salezy-4de15-firebase-adminsdk-vql86-b2b376decd.json'))
 
@@ -30,6 +32,16 @@ app.use(cors());
 
 app.use(helmet());
 
+app.use(session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: true,
+    cookie: {
+        secure: false,
+        maxAge: 86400000
+    }
+}));
+
 // User routes
 app.use('/user', userRoutes);
 
@@ -40,6 +52,12 @@ app.use('/widget', widgetRoutes);
 
 //Visitors routes
 app.use('/visitor', visitorRoutes);
+
+//SSE connection route
+app.use('/connection', sseRoute);
+
+console.log(session)
+
 
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
