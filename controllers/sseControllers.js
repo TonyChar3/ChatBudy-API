@@ -2,6 +2,7 @@ import asyncHandler from 'express-async-handler';
 import admin from 'firebase-admin';
 
 const connections = new Map()
+let connectedUser;
 
 //@desc Route grant access to the SSE connection
 const AuthSSEconnection = asyncHandler(async(req,res,next) => {
@@ -12,8 +13,7 @@ const AuthSSEconnection = asyncHandler(async(req,res,next) => {
     
         if(decodeToken) {
             const userID = decodeToken.uid
-
-            req.session.user = userID
+            connectedUser = userID
             
             res.status(201).json({ message: "SSE connection granted"})
         }
@@ -29,18 +29,16 @@ const AuthSSEconnection = asyncHandler(async(req,res,next) => {
 const SSEconnection = asyncHandler(async(req,res,next) => {
 
     try{
-        const userID = req.session.user
-
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
         res.setHeader('Access-Control-Allow-Origin', 'http://127.0.0.1:5173');
-    
+        
         res.write('SSE connection started\n\n');
-        connections.set(userID, res);
-
+        connections.set(connectedUser, res);
+    
         res.on('close', () => {
-            connections.delete(userID);
+            connections.delete(connectedUser);
         });
 
     } catch(err){

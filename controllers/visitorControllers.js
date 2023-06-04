@@ -1,7 +1,7 @@
 import asyncHandler from 'express-async-handler';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
-import { uniqueVisitorID, getVisitorBrowser } from '../utils/manageVisitors.js';
+import { uniqueVisitorID, getVisitorBrowser, realTimeUpdated } from '../utils/manageVisitors.js';
 import Visitor from '../models/visitorsModels.js';
 import User from '../models/userModels.js';
 import admin from 'firebase-admin';
@@ -57,6 +57,11 @@ const createVisitor = asyncHandler(async(req,res,next) => {
             });
 
             if(add_visitor){
+                const get_update = await realTimeUpdated(access_id);
+                if(!get_update){
+                    res.status(500);
+                }
+                sendUpdateToUser(get_update.userID, get_update.array)
                 res.json({ message: "New visitor!"})
             }
         }
@@ -88,10 +93,10 @@ const fetchAllVisiotr = asyncHandler(async(req,res,next) => {
             }
     
             if(visitor_array.visitor.length === 0) {
-                sendUpdateToUser(user._id, [{ message: "No visitors" }]);
+                sendUpdateToUser(user._id, { message: "No visitors" });
                 res.send({ message: "No visitors"});
             } else {
-                sendUpdateToUser(user.uid, visitor_array.visitor);
+                sendUpdateToUser(user._id, visitor_array.visitor);
                 res.status(201);
             }
         }
@@ -107,7 +112,7 @@ const deleteVisitor = asyncHandler( async(req,res,next) => {
     try{
         // will need the user hash + the visitor _id
         const { u_hash, visitor_id } = req.body;
-        
+
         const userUID = await User.findOne({ user_access: u_hash })
         // find the visitor object in the collection
         const user_visitors = await Visitor.findById(u_hash);
@@ -120,7 +125,7 @@ const deleteVisitor = asyncHandler( async(req,res,next) => {
             user_visitors.visitor.splice(visitor_index, 1);
             const save = await user_visitors.save();
             if(save){
-                sendUpdateToUser(userUID, user_visitors.visitor)
+                sendUpdateToUser(userUID._id, user_visitors.visitor)
                 res.status(200).json({ message: "Visitor removed" });
             }
             

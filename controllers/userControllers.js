@@ -16,18 +16,20 @@ const registerUser = asyncHandler(async(req,res,next) => {
         const decodedToken = await admin.auth().verifyIdToken(token)
 
         if(decodedToken){
+            
             // get the user data
             const data = await admin.auth().getUser(decodedToken.user_id)
             // generate a unique user hash
             const u_hash = await uniqueUserHash();
             if(data && u_hash){
-                
+                console.log(data)
+                console.log(u_hash)
                 //create the user and insert it in the DB
                 const user = await User.create({
                     _id: data.uid,
                     user_access: u_hash,
                     username: username,
-                    email: data.email,
+                    email: data.email
                 });
 
                 // create the user widget
@@ -66,7 +68,6 @@ const updateProfile = asyncHandler(async(req,res,next) => {
 const currentUser = asyncHandler(async(req,res,next) => {
     try{
         const token = req.headers.authorization.split(' ')[1]
-        
         const decodedToken = await admin.auth().verifyIdToken(token)
     
         if(decodedToken){

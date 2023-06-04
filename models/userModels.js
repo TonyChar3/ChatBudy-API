@@ -1,7 +1,15 @@
 import mongoose from 'mongoose';
 
-const userSchema = mongoose.Schema({
+const notificationsItem = mongoose.Schema({
+    text: {
+        type: String
+    }
+},
+{
+    timestamps: true
+});
 
+const userSchema = mongoose.Schema({
     _id: {
         type: String,
         required: true
@@ -16,17 +24,12 @@ const userSchema = mongoose.Schema({
     },
     email: {
         type: String,
-        required: true,
-        unique: true
+        required: true
     },
-    notifications: [{
-        _id: {
-            type: String
-        },
-        text: {
-            type: String
-        }
-    }]
+    notification:{
+        type: [notificationsItem],
+        default: []
+    } 
 },
 {
     timestamps: true
