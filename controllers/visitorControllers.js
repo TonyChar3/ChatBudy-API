@@ -1,7 +1,7 @@
 import asyncHandler from 'express-async-handler';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
-import { uniqueVisitorID, getVisitorBrowser, realTimeUpdated } from '../utils/manageVisitors.js';
+import { getVisitorBrowser, realTimeUpdated, generateJWT, generateRandomID } from '../utils/manageVisitors.js';
 import Visitor from '../models/visitorsModels.js';
 import User from '../models/userModels.js';
 import admin from 'firebase-admin';
@@ -35,14 +35,14 @@ const visitorInfoFetch = asyncHandler( async(req,res,next) => {
 //@access PRIVATE
 const createVisitor = asyncHandler(async(req,res,next) => {
     try{
-        const { isoCode, browser } = req.body;
+        const { isoCode, browser, id } = req.body;
         const access_id = req.params.id
         
-        const uid = await uniqueVisitorID(access_id);
+        const uid = await generateRandomID(access_id);
         const visitor = await Visitor.findById(access_id);
         const visitor_browser = await getVisitorBrowser(browser);
        
-        if(uid && visitor && visitor_browser) {
+        if( visitor && visitor_browser && uid) {
             
             const newVisitor = {
                 _id: uid,
@@ -62,7 +62,14 @@ const createVisitor = asyncHandler(async(req,res,next) => {
                     res.status(500);
                 }
                 sendUpdateToUser(get_update.userID, get_update.array)
-                res.json({ message: "New visitor!"})
+
+                const generate_token = await generateJWT(uid)
+                if(!generate_token){
+                    res.status(500);
+                    throw new Error('Unable to generate JWT for visitor...please try again')
+                }
+                res.cookie('visitor_jwt', generate_token, { httpOnly: true, maxAge: 48 * 60 * 60 * 1000, sameSite: 'none', secure: true })
+                res.send({ message: "Cookie sent" });
             }
         }
     } catch(err) {

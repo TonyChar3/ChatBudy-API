@@ -1,6 +1,19 @@
 import crypto from 'crypto';
 import Visitor from '../models/visitorsModels.js';
 import User from '../models/userModels.js';
+import jsonwebtoken from 'jsonwebtoken';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const pathToPrivKey = path.join(__dirname, '../', 'id_rsa_priv.pem');
+const pathToPubKey = path.join(__dirname, '../', 'id_rsa_pub.pem');
+
+const PRIV_KEY = fs.readFileSync(pathToPrivKey, 'utf8');
+const PUB_KEY = fs.readFileSync(pathToPubKey, 'utf8');
 
 /**
  * Generate a random identifier for a visitor
@@ -11,37 +24,6 @@ const generateRandomID = () => {
     hash.update(randomBytes);
     const randomID = hash.digest('hex').substring(0,10);
     return randomID;
-}
-
-/**
- * Make sure there no duplicate ID in the Visiotr Array
- */
-const uniqueVisitorID = async(array_id) => {
-    // generate the random id
-    let visitor_uid;
-    // flag for the uid duplicate check
-    let uid_flag = true
-
-    // find the visitor array
-    const visitor_array = await Visitor.findById(array_id);
-    if(!visitor_array){
-        res.status(404);
-        throw new Error("Error! The visitor array to modified wasn't found...please try again")
-    }
-
-    do {
-        // generate the ID
-        visitor_uid = generateRandomID();
-        
-        const check_duplicate = visitor_array.visitor.findIndex(visitor => visitor._id.toString() === visitor_uid.toString());
-        
-        if(check_duplicate !== -1){
-            uid_flag = true;
-        } else if(check_duplicate === -1){
-            uid_flag = false
-        }
-    } while (uid_flag === true); 
-    return visitor_uid;
 }
 
 /**
@@ -133,4 +115,53 @@ const realTimeUpdated = async(hash) => {
   }
 }
 
-export { generateRandomID, uniqueUserHash, uniqueVisitorID, getVisitorBrowser, realTimeUpdated }
+/**
+ * Create a JWT with the new visitor ID's
+ */
+const generateJWT = async(visitor_id) => {
+  try{
+    const _id = visitor_id;
+
+    const payload = {
+      id: _id,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + (48 * 60 * 60)
+    };
+
+    const signedToken = jsonwebtoken.sign(payload, PRIV_KEY, { algorithm: 'RS256' });
+
+    return {
+      jwtToken: signedToken
+    }
+  } catch(err){
+    console.log(err)
+  }
+}
+
+/**
+ * Insert the JWT into a httpOnly cookie
+ */
+const httpCookie = async(jwt_token) => {
+  try{  
+
+  } catch(err){
+    console.log(err)
+  }
+}
+
+/**
+ * Decode the JWT sent back from the backend
+ */
+const decodeJWT = async(token) => {
+  try{
+    const decodeToken = jsonwebtoken.verify(token, PUB_KEY, { algorithms: 'RS256' })
+
+    if(decodeToken){
+      return decodeToken
+    }
+  } catch(err){
+    console.log(err)
+  }
+}
+
+export { generateRandomID, uniqueUserHash, getVisitorBrowser, realTimeUpdated, generateJWT, httpCookie, decodeJWT }

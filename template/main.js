@@ -125,26 +125,6 @@ class SalezyWidget {
       </header>
     `;
 
-    const visitorWelcomePage = document.createElement("div");
-    visitorWelcomePage.classList.add("visitor-welcome__wrapper");
-    visitorWelcomePage.innerHTML = `
-      <form class="visitor-welcome__form">
-        <div class="visitor-welcome__header">
-          <h3>Your email?</h3>
-          <i class="fa-regular fa-circle-info info-icon"></i>
-        </div>
-        <p class="visitor-welcome__information visitor-welcome__hidden">Help us identify you</p>
-        <div class="form__field">
-          <input type="text" placeholder="Your email"/>
-        </div>
-        <div class="visitor-welcome__button-container">
-          <button type="button" id="visitor-welcome__submit">Submit</button>
-          <p id="visitor-welcome__nope">Nope!</p>
-        </div>
-      </form>
-    `;
-    this.visitorWelcome = visitorWelcomePage
-
     const supportPage = document.createElement("form")
     supportPage.classList.add("hidden") 
     supportPage.classList.add("widget-support__form")
@@ -181,7 +161,7 @@ class SalezyWidget {
     this.supportPage = supportPage
     
     const chatRoomPage = document.createElement("div");
-    chatRoomPage.classList.add("chatroom__wrapper", "hidden");
+    chatRoomPage.classList.add("chatroom__wrapper");
     chatRoomPage.innerHTML =  `
       <div class="chatroom__container">
         <div class="chatroom__chat left">
@@ -211,27 +191,15 @@ class SalezyWidget {
 
     this.widgetContainer.appendChild(supportPage);
     this.widgetContainer.appendChild(chatRoomPage);
-    this.widgetContainer.appendChild(visitorWelcomePage);
 
     const closeButton = this.widgetContainer.querySelector('.fa-chevron-down');
     const openSupport = this.widgetContainer.querySelector('.fa-question');
     const openChat = this.widgetContainer.querySelector('.goback-button__container');
-    const openInfo = this.widgetContainer.querySelector('.info-icon');
-    const emailInfo = this.widgetContainer.querySelector('.visitor-welcome__information');
-    const nopeButton = this.widgetContainer.querySelector('#visitor-welcome__nope');
-    const emailSubmit = this.widgetContainer.querySelector('#visitor-welcome__submit');
-    this.emailInfo = emailInfo;
     this.supportIcon = openSupport;
 
     closeButton.addEventListener("click", this.toggleOpen.bind(this));
     openSupport.addEventListener("click", this.changePage.bind(this));
     openChat.addEventListener("click", this.changePage.bind(this));
-    openInfo.addEventListener("click", this.openInfo.bind(this));
-    nopeButton.addEventListener("click", () => {
-      this.welcome = true;
-      this.welcomeVisitor();
-      localStorage.setItem("state-widget", JSON.stringify({ state: true }));
-    })
   }
 
   /**
@@ -259,26 +227,21 @@ class SalezyWidget {
     document.head.appendChild(link2);
     document.head.appendChild(link3);
   }
+
   /**
    * Welcome the user when it's his first visit
    */
   welcomeVisitor() {
-    if(this.welcome){
-      this.supportIcon.classList.remove("widget__hidden");
-      this.visitorWelcome.classList.add("hidden");
-      this.chatRoomPage.classList.remove("hidden");
-    } else {
-      this.supportIcon.classList.add("widget__hidden");
-      this.chatRoomPage.classList.add("hidden");
-    }
+
   }
+
   /**
    * Open or close the widget
    */
   toggleOpen(){
     this.open = !this.open;
     if(this.open) {
-      this.welcomeVisitor();
+      this.initiateChat();
       this.widgetIcon.classList.add("widget__hidden");
       this.sendIcon.classList.remove("widget__hidden");
       this.widgetContainer.classList.remove("content__hidden");
@@ -291,6 +254,7 @@ class SalezyWidget {
       this.change = false;
     }
   }
+
   /**
    * Switch between the chat and support page
    */
@@ -311,31 +275,14 @@ class SalezyWidget {
   }
   
   /**
-   * Open or close visitor email info
-   */
-  openInfo() {
-    this.info = !this.info;
-    if(this.info){
-      this.emailInfo.classList.remove("visitor-welcome__hidden");
-    } else {
-      this.emailInfo.classList.add("visitor-welcome__hidden");
-    }
-  }
-  /**
    * Get the visitor info once it loads up
    */
   async loadUp(){
-    // Use the local Storage to prevent from running everytime the user refresh the page
-    // When the widget load up it will create a new visitor with the navigator.userAgent
-    // -> when this visitor decide to interact with the widget he will have to give his email
-    // -> This visitor will be deleted and a new visitor object will created with the email give
-
     try{
       if(!sessionStorage.getItem('widgetLoaded')){
-        const response = await fetch('http://localhost:8080/visitor/visitor-info')
+        const response = await fetch('https://localhost:8080/visitor/visitor-info')
 
         if(response){
-          
           const data = await response.json();
           if(data){
             const newVisitor = {
@@ -343,8 +290,9 @@ class SalezyWidget {
               browser: navigator.userAgent
             }
   
-            const visitor = await fetch(`http://localhost:8080/visitor/new-visitor-${this.widgetID}`,{
+            const visitor = await fetch(`https://localhost:8080/visitor/new-visitor-${this.widgetID}`,{
               method: 'post',
+              credentials: 'include',
               headers: {
                 'Content-Type': 'application/json'
               },
@@ -355,6 +303,7 @@ class SalezyWidget {
               const visitor_data = await visitor.json();
               if(visitor_data){
                 sessionStorage.setItem('widgetLoaded', true);
+                location.reload();
               }
             }
           } 
@@ -363,16 +312,59 @@ class SalezyWidget {
     } catch(err){
         console.log(err)
     }
+  }
 
-    // -> If nothing is there create a new state space for this browser in the db
-    // -> if there's something use the data
-    const visitorData = {
-      userAgent: navigator.userAgent,
-      language: navigator.language,
-      screenWidth: window.screen.width,
-      screenHeight: window.screen.height
+  /**
+   * Start chat with chatbot - Salesman
+   */
+  async initiateChat() {
+    try{
+      const response = await fetch('https://localhost:8080/chat/chat-room',{
+        method: 'get',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if(response){
+        const data = await response.json();
+        console.log(data)
+      }
+    } catch(err){
+      console.log(err);
     }
-    console.log(visitorData)
+  }
+
+  /**
+   * Visitor unique Identifier generator
+   */
+  async uniqueVisitorID(array_id) {
+    // generate the random id
+    let visitor_uid;
+    // flag for the uid duplicate check
+    let uid_flag = true
+
+    // find the visitor array
+    const visitor_array = await Visitor.findById(array_id);
+    if(!visitor_array){
+        res.status(404);
+        throw new Error("Error! The visitor array to modified wasn't found...please try again")
+    }
+
+    do {
+        // generate the ID
+        visitor_uid = generateRandomID();
+        
+        const check_duplicate = visitor_array.visitor.findIndex(visitor => visitor._id.toString() === visitor_uid.toString());
+        
+        if(check_duplicate !== -1){
+            uid_flag = true;
+        } else if(check_duplicate === -1){
+            uid_flag = false
+        }
+    } while (uid_flag === true); 
+    return visitor_uid;
   }
 }
 
