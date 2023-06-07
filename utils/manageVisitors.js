@@ -47,6 +47,37 @@ const uniqueUserHash = async() => {
     } while (hash_flag === true);
 }
 
+  /**
+   * Visitor unique Identifier generator
+   */
+const uniqueVisitorID = async(array_id) => {
+    // generate the random id
+    let visitor_uid;
+    // flag for the uid duplicate check
+    let uid_flag = true
+
+    // find the visitor array
+    const visitor_array = await Visitor.findById(array_id);
+    if(!visitor_array){
+        res.status(404);
+        throw new Error("Error! The visitor array to modified wasn't found...please try again")
+    }
+
+    do {
+        // generate the ID
+        visitor_uid = generateRandomID();
+        
+        const check_duplicate = visitor_array.visitor.findIndex(visitor => visitor._id.toString() === visitor_uid.toString());
+        
+        if(check_duplicate !== -1){
+            uid_flag = true;
+        } else if(check_duplicate === -1){
+            uid_flag = false
+        }
+    } while (uid_flag === true); 
+    return visitor_uid;
+}
+
 /**
  * Get the visitor specific browser
  */
@@ -164,4 +195,4 @@ const decodeJWT = async(token) => {
   }
 }
 
-export { generateRandomID, uniqueUserHash, getVisitorBrowser, realTimeUpdated, generateJWT, httpCookie, decodeJWT }
+export { generateRandomID, uniqueUserHash,uniqueVisitorID, getVisitorBrowser, realTimeUpdated, generateJWT, httpCookie, decodeJWT }

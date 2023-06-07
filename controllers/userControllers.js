@@ -3,6 +3,7 @@ import User from '../models/userModels.js';
 import Widget from '../models/widgetModels.js';
 import admin from 'firebase-admin';
 import Visitors from '../models/visitorsModels.js';
+import ChatRoom from '../models/chatRoomModels.js';
 import { uniqueUserHash } from '../utils/manageVisitors.js';
 
 //@desc Register a new User
@@ -43,7 +44,12 @@ const registerUser = asyncHandler(async(req,res,next) => {
                     _id: u_hash
                 });
 
-                if(user && widget && visitors){
+                // create the chatroom collection of the user
+                const chatroom = await ChatRoom.create({
+                    _id: u_hash
+                });
+
+                if(user && widget && visitors && chatroom){
                     res.status(200).json({ message: "Welcome to the Salezy App"})
                 } else {
                     res.status(500);

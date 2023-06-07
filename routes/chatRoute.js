@@ -1,18 +1,19 @@
 import express from 'express';
-import { decodeJWT } from '../utils/manageVisitors.js';
+import { createChatRoom } from '../controllers/chatControllers.js';
 
 const router = express.Router();
 
-router.get('/chat-room', async(req,res,next) => {
-    try{
-        const cookie_value = req.cookies.visitor_jwt.jwtToken
-        const decoded = await decodeJWT(cookie_value);
-        if(decoded){
-            res.json({ message: `${decoded.id} wants to chat`})
-        }
-    } catch(err){
-        next(err)
-    }
-});
+router.post('/new-room', createChatRoom);
 
 export default router
+
+/**
+ * Chechlist
+ */
+/**
+ * -> One route to create a new chat room once the owner/user of the salezy widget accepts to chat ( * clicks the button )
+ *      Will also create a new WebSocket connection to allow bi-directionnal connection
+ * -> One route to send a new chat
+ * -> One route to delete the chat
+ * -> One route to fetch all the chat back up again ( * to maintain the state of the chatroom )
+ */

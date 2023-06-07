@@ -1,4 +1,4 @@
-import { styles } from "./asset.js";
+import { styles, LoadUpsequence } from "./asset.js";
 
 class SalezyWidget {
 
@@ -12,7 +12,10 @@ class SalezyWidget {
     this.visitor = {};// state for the visitor of the website
     this.initialize();// To invoke and display the UI for our widget in the DOM
     this.injectStyles();// To invoke and add the styling
+    this.LoadUpsequence = LoadUpsequence;
+    this.LoadUpsequence(this.widgetID);
   }
+  
 
   position = "";
   open = false;
@@ -89,7 +92,7 @@ class SalezyWidget {
     this.widgetContainer = document.createElement('div');
     this.widgetContainer.classList.add("widget__content");
     this.widgetContainer.classList.add("content__hidden");
-    document.addEventListener("DOMContentLoaded", this.loadUp.bind(this))
+    document.addEventListener("DOMContentLoaded", () => this.LoadUpsequence(this.widgetID))
   
     /**
      * Invoke the createWidget Method
@@ -241,7 +244,6 @@ class SalezyWidget {
   toggleOpen(){
     this.open = !this.open;
     if(this.open) {
-      this.initiateChat();
       this.widgetIcon.classList.add("widget__hidden");
       this.sendIcon.classList.remove("widget__hidden");
       this.widgetContainer.classList.remove("content__hidden");
@@ -253,6 +255,11 @@ class SalezyWidget {
       this.widgetContainer.classList.add("content__hidden");
       this.change = false;
     }
+  }
+
+  handleDOMContentLoaded(){
+    console.log(this.widgetID)
+    this.LoadUpsequence(this.widgetID)
   }
 
   /**
@@ -272,99 +279,6 @@ class SalezyWidget {
       this.sendIcon.classList.remove("widget__hidden");
       this.supportSubmitIcon.classList.add("widget__hidden");
     }
-  }
-  
-  /**
-   * Get the visitor info once it loads up
-   */
-  async loadUp(){
-    try{
-      if(!sessionStorage.getItem('widgetLoaded')){
-        const response = await fetch('https://localhost:8080/visitor/visitor-info')
-
-        if(response){
-          const data = await response.json();
-          if(data){
-            const newVisitor = {
-              isoCode: data.info.country.iso_code,
-              browser: navigator.userAgent
-            }
-  
-            const visitor = await fetch(`https://localhost:8080/visitor/new-visitor-${this.widgetID}`,{
-              method: 'post',
-              credentials: 'include',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify(newVisitor)
-            });
-  
-            if(visitor) {
-              const visitor_data = await visitor.json();
-              if(visitor_data){
-                sessionStorage.setItem('widgetLoaded', true);
-                location.reload();
-              }
-            }
-          } 
-        }
-      }
-    } catch(err){
-        console.log(err)
-    }
-  }
-
-  /**
-   * Start chat with chatbot - Salesman
-   */
-  async initiateChat() {
-    try{
-      const response = await fetch('https://localhost:8080/chat/chat-room',{
-        method: 'get',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if(response){
-        const data = await response.json();
-        console.log(data)
-      }
-    } catch(err){
-      console.log(err);
-    }
-  }
-
-  /**
-   * Visitor unique Identifier generator
-   */
-  async uniqueVisitorID(array_id) {
-    // generate the random id
-    let visitor_uid;
-    // flag for the uid duplicate check
-    let uid_flag = true
-
-    // find the visitor array
-    const visitor_array = await Visitor.findById(array_id);
-    if(!visitor_array){
-        res.status(404);
-        throw new Error("Error! The visitor array to modified wasn't found...please try again")
-    }
-
-    do {
-        // generate the ID
-        visitor_uid = generateRandomID();
-        
-        const check_duplicate = visitor_array.visitor.findIndex(visitor => visitor._id.toString() === visitor_uid.toString());
-        
-        if(check_duplicate !== -1){
-            uid_flag = true;
-        } else if(check_duplicate === -1){
-            uid_flag = false
-        }
-    } while (uid_flag === true); 
-    return visitor_uid;
   }
 }
 

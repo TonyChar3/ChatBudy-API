@@ -337,3 +337,118 @@ export const styles = `
         transition: transform .2s ease;
     }
 `;
+
+/**
+* Get the visitor info once it loads up
+*/
+export const LoadUpsequence = async(widget_id) => {
+    try{
+        if(!sessionStorage.getItem('widgetLoaded')){
+            const response = await fetch(`http://localhost:8080/visitor/visitor-info`,{
+                method: 'get',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+  
+            if(response){
+                const data = await response.json();
+                if(data){
+                    console.log(widget_id)
+                    const new_visitor = await setNewVisitor(data, widget_id);
+                    const new_chat = await initiateChat(widget_id);
+                    if(new_chat && new_visitor){
+                        sessionStorage.setItem('widgetLoaded', true);
+                    }
+                }
+            }
+        }
+    } catch(err){
+        console.log(err)
+    }
+};
+
+/**
+* Set the visitor
+*/
+export const setNewVisitor = async(visitor_data, widget_id) => {
+    try{
+        console.log(widget_id)
+        const newVisitor = {
+            isoCode: visitor_data.info.country.iso_code,
+            browser: navigator.userAgent
+        }
+        
+        const visitor = await fetch(`http://localhost:8080/visitor/new-visitor-${widget_id}`,{
+            method: 'post',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(newVisitor)
+        });
+
+        if(visitor){
+            const data = await visitor.json()
+            setCookie('visitor_jwt', data.visitorToken.jwtToken)
+            return true
+        }
+    } catch(err){
+        console.log(err)
+        return false
+    }
+
+}
+
+/**
+* Start chat with chatbot - Salesman
+*/
+export const initiateChat = async(widget_id) => {
+    try{
+      const chat = {
+        u_hash: widget_id
+      }
+
+      const token = getCookie('visitor_jwt');
+
+      if(token){
+        const start_chat = await fetch('http://localhost:8080/chat/new-room',{
+            method: 'post',
+            headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify(chat)
+        });
+
+        if(start_chat) {
+            return true
+        }
+      }
+
+    } catch(err){
+      console.log(err);
+      return false
+    }
+}
+
+/**
+ * Dev env set a cookie
+ */
+function setCookie(name, value) {
+    const cookieString = `${encodeURIComponent(name)}=${encodeURIComponent(value)}`;
+    document.cookie = cookieString;
+}
+
+function getCookie(name) {
+    const cookieString = document.cookie
+    const cookies = cookieString.split('; ');
+  
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].split('=');
+      if (cookie[0] === name) {
+        return cookie[1];
+      }
+    }
+  
+    return null;
+}

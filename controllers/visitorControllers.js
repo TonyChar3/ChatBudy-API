@@ -13,15 +13,14 @@ dotenv.config();
 //@route GET /visitor/visitor-info
 //@access PRIVATE
 const visitorInfoFetch = asyncHandler( async(req,res,next) => {
-
     try {
         const api_key = process.env.GEO_KEY
-        const response = await fetch(`https://api.geoapify.com/v1/ipinfo?&apiKey=${api_key}`)
 
+        const response = await fetch(`https://api.geoapify.com/v1/ipinfo?&apiKey=${api_key}`)
         if(response) {
             const data =  await response.json()
             if(data) {
-                res.status(200).json({ info: data })
+                res.json({ info: data })
             }
         }
         
@@ -35,10 +34,10 @@ const visitorInfoFetch = asyncHandler( async(req,res,next) => {
 //@access PRIVATE
 const createVisitor = asyncHandler(async(req,res,next) => {
     try{
-        const { isoCode, browser, id } = req.body;
+        const { isoCode, browser } = req.body;
         const access_id = req.params.id
         
-        const uid = await generateRandomID(access_id);
+        const uid = generateRandomID(access_id);
         const visitor = await Visitor.findById(access_id);
         const visitor_browser = await getVisitorBrowser(browser);
        
@@ -68,8 +67,8 @@ const createVisitor = asyncHandler(async(req,res,next) => {
                     res.status(500);
                     throw new Error('Unable to generate JWT for visitor...please try again')
                 }
-                res.cookie('visitor_jwt', generate_token, { httpOnly: true, maxAge: 48 * 60 * 60 * 1000, sameSite: 'none', secure: true })
-                res.send({ message: "Cookie sent" });
+                // res.cookie('visitor_jwt', generate_token, { maxAge: 48 * 60 * 60 * 1000, httpOnly:false, sameSite: false })
+                res.send({ visitorToken: generate_token });
             }
         }
     } catch(err) {
@@ -144,5 +143,21 @@ const deleteVisitor = asyncHandler( async(req,res,next) => {
     }
 });
 
+//@desc Route to update the specific visitor
+//@route PUT /visitor/update-visitor
+//@acces PRIVATE
+const updateVisitor = asyncHandler(async(req,res,next) => {
+    try{
+        // get the specific user ID
+        // find him
+        // update his profile
+        // save()
+        // send back success message
+    } catch(err){
+        res.status(500);
+        next(err)
+    }
+});
 
-export { visitorInfoFetch, createVisitor, fetchAllVisiotr, deleteVisitor }
+
+export { visitorInfoFetch, createVisitor, fetchAllVisiotr, deleteVisitor, updateVisitor }

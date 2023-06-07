@@ -6,6 +6,7 @@ import Widget from '../models/widgetModels.js';
 const setOriginsDomain = async() => {
     try{ 
         const  domains = await Widget.distinct('domain');
+        domains.push('http://127.0.0.1:5173')
         return domains
 
     } catch(err){
@@ -22,7 +23,6 @@ const corsOptions = async(req, callback ) => {
         const allowedOrigins = await setOriginsDomain();
         const origin = req.header('Origin');
         if(allowedOrigins){
-            allowedOrigins.push('http://127.0.0.1:5173')
             const matchingOrigin = allowedOrigins.find((allowedOrigin) => {
                 return origin === allowedOrigin;
             });
