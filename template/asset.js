@@ -354,7 +354,6 @@ export const LoadUpsequence = async(widget_id) => {
             if(response){
                 const data = await response.json();
                 if(data){
-                    console.log(widget_id)
                     const new_visitor = await setNewVisitor(data, widget_id);
                     const new_chat = await initiateChat(widget_id);
                     if(new_chat && new_visitor){
@@ -369,7 +368,7 @@ export const LoadUpsequence = async(widget_id) => {
 };
 
 /**
-* Set the visitor
+* Set up a new visitor
 */
 export const setNewVisitor = async(visitor_data, widget_id) => {
     try{
@@ -400,7 +399,7 @@ export const setNewVisitor = async(visitor_data, widget_id) => {
 }
 
 /**
-* Start chat with chatbot - Salesman
+* Create a new chat room - Salesman
 */
 export const initiateChat = async(widget_id) => {
     try{
@@ -428,6 +427,20 @@ export const initiateChat = async(widget_id) => {
     } catch(err){
       console.log(err);
       return false
+    }
+}
+
+/**
+ * Open up the chat room
+ */
+export const openChat = async(widget_id) => {
+    try{
+        // use the widget_id
+        // use the visitor_jwt cookie
+        // send request to the route
+        //  -> successfull: a websocket connection is made and chat can be sent and received
+    } catch(err){
+        console.log(err)
     }
 }
 

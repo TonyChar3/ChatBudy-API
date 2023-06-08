@@ -170,17 +170,6 @@ const generateJWT = async(visitor_id) => {
 }
 
 /**
- * Insert the JWT into a httpOnly cookie
- */
-const httpCookie = async(jwt_token) => {
-  try{  
-
-  } catch(err){
-    console.log(err)
-  }
-}
-
-/**
  * Decode the JWT sent back from the backend
  */
 const decodeJWT = async(token) => {
@@ -195,4 +184,20 @@ const decodeJWT = async(token) => {
   }
 }
 
-export { generateRandomID, uniqueUserHash,uniqueVisitorID, getVisitorBrowser, realTimeUpdated, generateJWT, httpCookie, decodeJWT }
+/**
+ * Make sure the user access hash is valid
+ */
+const validUserAcess = async(hash) => {
+  try{
+    const valid_hash = await User.findOne({ user_access: hash });
+    if(valid_hash){
+      return true
+    } else {
+      return false
+    }
+  } catch(err){
+    console.log(err)
+  }
+}
+
+export { generateRandomID, uniqueUserHash,uniqueVisitorID, getVisitorBrowser, realTimeUpdated, generateJWT, decodeJWT, validUserAcess }

@@ -10,7 +10,6 @@ const createChatRoom = asyncHandler(async(req,res,next) => {
     try{
         // get the user hash
         const { u_hash } = req.body;
-
         // decode the cookie and validate the JWT
         // const cookie_value = req.cookies
         const cookie_value = req.headers.authorization.split(' ')[1]

@@ -12,6 +12,7 @@ import sseRoute from './routes/sseRoute.js';
 import chatRoute from './routes/chatRoute.js';
 import { corsOptions } from './middleware/getOrigins.js';
 import cookieParser from 'cookie-parser';
+import { webSocketServerSetUp } from './config/webSockets.js';
 
 const credentials = JSON.parse(fs.readFileSync('./firebaseKey/salezy-4de15-firebase-adminsdk-vql86-b2b376decd.json'))
 
@@ -55,6 +56,8 @@ app.use('/chat', chatRoute);
 app.use('/connection', sseRoute);
 
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
     console.log(`Server running on port ${port}`);
 });
+
+webSocketServerSetUp(server);
