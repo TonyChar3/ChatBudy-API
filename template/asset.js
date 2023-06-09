@@ -1,3 +1,5 @@
+let socket;// variable for the WebSocket connection
+
 export const styles = `
 
     .widget__content * {
@@ -372,7 +374,6 @@ export const LoadUpsequence = async(widget_id) => {
 */
 export const setNewVisitor = async(visitor_data, widget_id) => {
     try{
-        console.log(widget_id)
         const newVisitor = {
             isoCode: visitor_data.info.country.iso_code,
             browser: navigator.userAgent
@@ -435,10 +436,50 @@ export const initiateChat = async(widget_id) => {
  */
 export const openChat = async(widget_id) => {
     try{
-        // use the widget_id
+        if(widget_id){
+            // will send the user_hash and the httpOnly cookie jwt 
+            //TODO: credentials: 'include' once in production to send the httpOnly cookie
+            const token = getCookie('visitor_jwt');
+            const ws_auth_fetch = await fetch('http://localhost:8080/chat/auth-ws',{
+                method: 'post',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+ token
+                },
+                body: JSON.stringify({ user_hash: widget_id })
+            });
+            if(ws_auth_fetch){
+                // the fetch request will return the jwt with the hash and jwt inside
+                const data = await ws_auth_fetch.json();
+                if(data){
+                    console.log(data.wss_connection)
+                    // the WS connection will be made with the same jwt inside the params
+                    socket = new WebSocket(`ws://localhost:8080?id=${data.wss_connection}`);
+                    console.log(socket);
+                    // In the backend the jwt will be decoded and the websocket connection associated to both of the ids inside the JWT
+                    // socket = the set connection between the two ids
+                }
+            }
+        }
         // use the visitor_jwt cookie
         // send request to the route
         //  -> successfull: a websocket connection is made and chat can be sent and received
+    } catch(err){
+        console.log(err)
+    }
+}
+
+/**
+ * Close the Chat
+ */
+export const stopChat = (widget_id) => {
+    try{
+        if(widget_id){
+            if(socket.url === `ws://localhost:8080/?id=${widget_id}`){
+                socket.close()
+                console.log(socket.url, 'close')
+            }
+        }
     } catch(err){
         console.log(err)
     }

@@ -1,5 +1,5 @@
 import asyncHandler from "express-async-handler";
-import { decodeJWT } from '../utils/manageVisitors.js';
+import { decodeJWT, generateJWT } from '../utils/manageVisitors.js';
 import ChatRoom from '../models/chatRoomModels.js';
 
 
@@ -45,16 +45,35 @@ const createChatRoom = asyncHandler(async(req,res,next) => {
     }
 });
 
-
 //@desc Route to initiate the Chat using Socket.io
-//@route POST /chat/initiate-chat
+//@route POST /chat/auth-ws
 //@access PRIVATE
-const initiateChat = asyncHandler(async(req,res,next) => {
+const AuthForWS = asyncHandler(async(req,res,next) => {
     try{
-        // get both the current visitor id and owner of the widget hash
-        // find the chat room in the chat collection of the user
-        // send back every sent chat
-        // start WebSocket connection
+        // receive the user hash
+        const { user_hash } = req.body
+        // decode the cookie and validate the JWT
+        // const cookie_value = req.cookies
+        const cookie_value = req.headers.authorization.split(' ')[1]
+        const decoded = await decodeJWT(cookie_value, 'Visitor');
+        // add a new chat room to the chat collection array
+        const user_chatroom = await ChatRoom.findById(user_hash);
+        if(decoded && user_chatroom){
+            // if both are valid (hash and jwt)
+            console.log(decoded.id, user_hash)
+            // -> create another JWT with both the hash and id from the jwt and return it
+            const ws_JWT = await generateJWT(decoded.id, user_hash);
+            if(ws_JWT){
+                const deco = await decodeJWT(ws_JWT.jwtToken, 'WS')
+                if(deco){
+                    res.status(201).json({ wss_connection: ws_JWT.jwtToken });
+                }
+                
+            } else {
+                res.status(500);
+                throw new Error("Unable to generate a new jwt for WS connection...please try again")
+            }
+        }
     } catch(err){
         res.status(500)
         next(err)
@@ -89,4 +108,4 @@ const deleteChat = asyncHandler(async(req,res,next) => {
 });
 
 
-export { createChatRoom, sendChat, deleteChat, initiateChat }
+export { createChatRoom, sendChat, deleteChat, AuthForWS }

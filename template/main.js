@@ -1,4 +1,4 @@
-import { styles, LoadUpsequence } from "./asset.js";
+import { styles, LoadUpsequence, openChat, stopChat } from "./asset.js";
 
 class SalezyWidget {
 
@@ -14,6 +14,10 @@ class SalezyWidget {
     this.injectStyles();// To invoke and add the styling
     this.LoadUpsequence = LoadUpsequence;
     this.LoadUpsequence(this.widgetID);
+    this.openChat = openChat;
+    this.openChat();
+    this.stopChat = stopChat;
+    this.stopChat();
   }
   
 
@@ -244,6 +248,7 @@ class SalezyWidget {
   toggleOpen(){
     this.open = !this.open;
     if(this.open) {
+      this.openChat(this.widgetID);
       this.widgetIcon.classList.add("widget__hidden");
       this.sendIcon.classList.remove("widget__hidden");
       this.widgetContainer.classList.remove("content__hidden");
@@ -253,6 +258,7 @@ class SalezyWidget {
       this.sendIcon.classList.add("widget__hidden");
       this.supportSubmitIcon.classList.add("widget__hidden");
       this.widgetContainer.classList.add("content__hidden");
+      this.stopChat(this.widgetID);
       this.change = false;
     }
   }

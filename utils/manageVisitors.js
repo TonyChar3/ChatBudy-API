@@ -11,9 +11,13 @@ const __dirname = path.dirname(__filename);
 
 const pathToPrivKey = path.join(__dirname, '../', 'id_rsa_priv.pem');
 const pathToPubKey = path.join(__dirname, '../', 'id_rsa_pub.pem');
+const pathToWSPubKey = path.join(__dirname, '../', 'id_wss_pub.pem');
+const pathToWSPrivKey = path.join(__dirname, '../', 'id_wss_priv.pem');
 
 const PRIV_KEY = fs.readFileSync(pathToPrivKey, 'utf8');
 const PUB_KEY = fs.readFileSync(pathToPubKey, 'utf8');
+const WS_PUB_KEY = fs.readFileSync(pathToWSPubKey, 'utf8');
+const WS_PRIV_KEY = fs.readFileSync(pathToWSPrivKey, 'utf8');
 
 /**
  * Generate a random identifier for a visitor
@@ -149,20 +153,38 @@ const realTimeUpdated = async(hash) => {
 /**
  * Create a JWT with the new visitor ID's
  */
-const generateJWT = async(visitor_id) => {
+const generateJWT = async(visitor_id, user_hash) => {
   try{
-    const _id = visitor_id;
+    if(visitor_id && !user_hash){
+      const _id = visitor_id;
 
-    const payload = {
-      id: _id,
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + (48 * 60 * 60)
-    };
+      const payload = {
+        id: _id,
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + (48 * 60 * 60)
+      };
+  
+      const signedToken = jsonwebtoken.sign(payload, PRIV_KEY, { algorithm: 'RS256' });
+  
+      return {
+        jwtToken: signedToken
+      }
+    } else if(visitor_id && user_hash){
+      const _id = visitor_id;
+      const userHash = user_hash;
 
-    const signedToken = jsonwebtoken.sign(payload, PRIV_KEY, { algorithm: 'RS256' });
-
-    return {
-      jwtToken: signedToken
+      const payload = {
+        id: _id,
+        userHash: userHash,
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + (48 * 60 * 60)
+      };
+  
+      const signedToken = jsonwebtoken.sign(payload, WS_PRIV_KEY, { algorithm: 'RS256' });
+  
+      return {
+        jwtToken: signedToken
+      }
     }
   } catch(err){
     console.log(err)
@@ -172,9 +194,20 @@ const generateJWT = async(visitor_id) => {
 /**
  * Decode the JWT sent back from the backend
  */
-const decodeJWT = async(token) => {
+const decodeJWT = async(token, type_name) => {
   try{
-    const decodeToken = jsonwebtoken.verify(token, PUB_KEY, { algorithms: 'RS256' })
+
+    let decodeToken;
+
+    switch (type_name){
+      case "WS":
+        decodeToken = jsonwebtoken.verify(token, WS_PUB_KEY, { algorithms: 'RS256' })
+        break;
+      case "Visitor":
+        decodeToken = jsonwebtoken.verify(token, PUB_KEY, { algorithms: 'RS256' })
+      default: 
+        break;
+    }
 
     if(decodeToken){
       return decodeToken

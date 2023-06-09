@@ -1,41 +1,54 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { decodeJWT } from '../utils/manageVisitors.js';
 import { validUserAcess } from '../utils/manageVisitors.js';
+import Chatroom from '../models/chatRoomModels.js';
 
 export const webSocketServerSetUp = (server) => {
 
-    const wss = new WebSocketServer({ noServer: true });
+    const connections = new Map();// Map to track the connections
 
+    const wss = new WebSocketServer({ noServer: true });
+    // get the user's hash
+    let userHash; 
     server.on('upgrade', async(req, socket, head) => {
         try{
-            // check if the token is set in the authorization header
-            if(!!req.headers.authorization){
+            const jwt_connect = new URL(req.url, 'http://localhost:8080').searchParams.get('id');
+            const decodeT = await decodeJWT(jwt_connect, 'WS');
+            if(!decodeT.id || !decodeT.userHash) {
                 socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
                 socket.destroy();
                 return;
-            }
-            // get the user's hash
-            const user_hash = await validUserAcess(req.params.id)
-            // get the JWT 
-            const token = req.headers.authorization.split(' ')[1]
-            // dont connect if not valid
-            if(!user_hash || !token) {
-                socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
-                socket.destroy();
-                return;
-            }
-            // decode the JWt
-            const decodedJWT = await decodeJWT(token)
-            if(decodedJWT && user_hash){
-                wss.handleUpgrade(req, socket, head, (ws) => {
-                    socket.removeListener('error', () => {
-                        console.log('error')
+            } else if(decodeT.id && decodeT.userHash) {
+                // fetch the chatroom
+                const chat_room = await Chatroom.findById(decodeT.userHash)
+                if(chat_room){
+                    const room_index = chat_room.chat_rooms.findIndex(rooms => {
+                        console.log(rooms)
                     });
-                    wss.emit('connection', ws, req);
-                    socket.on('error', (error) => {
-                        console.log(error)
-                    });
-                });
+                    if(room_index === -1){
+                        socket.destroy()
+                    }
+                    // if(room_index !== -1){
+                    //     console.log(room_index)
+                    //     // wss.handleUpgrade(req, socket, head, (ws) => {
+                    //     //     socket.removeListener('error', () => {
+                    //     //         console.log('error')
+                    //     //     });
+                    //     //     wss.emit('connection', ws, req);
+                    //     //     socket.on('error', (error) => {
+                    //     //         console.log(error)
+                    //     //     });
+                    //     // });
+                    // } else {
+                    //     console.log(room_index)
+                    // }
+                    // // } else {
+                    // //     socket.write('HTTP/1.1 404 Not found\r\n\r\n');
+                    // //     socket.destroy();
+                    // //     return;
+                    // // }
+
+                }
             }
         } catch(err){
             console.log(err)
@@ -44,11 +57,13 @@ export const webSocketServerSetUp = (server) => {
     });
     
     wss.on('connection', (ws, req) => {
+        connections.set(userHash, ws);
         ws.on('error', (error) => {
             console.log(error)
         });
     
         ws.on('message', (msg, isBinary) => {
+            console.log('connection opened')
             wss.clients.forEach((client) => {
                 if(client.readyState === WebSocket.OPEN) {
                     client.send(msg, { binary: isBinary });
