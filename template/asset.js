@@ -407,7 +407,6 @@ export const initiateChat = async(widget_id) => {
       const chat = {
         u_hash: widget_id
       }
-
       const token = getCookie('visitor_jwt');
 
       if(token){
@@ -452,18 +451,22 @@ export const openChat = async(widget_id) => {
                 // the fetch request will return the jwt with the hash and jwt inside
                 const data = await ws_auth_fetch.json();
                 if(data){
-                    console.log(data.wss_connection)
                     // the WS connection will be made with the same jwt inside the params
                     socket = new WebSocket(`ws://localhost:8080?id=${data.wss_connection}`);
-                    console.log(socket);
-                    // In the backend the jwt will be decoded and the websocket connection associated to both of the ids inside the JWT
-                    // socket = the set connection between the two ids
+                    socket.addEventListener('open', (event) => {
+                        console.log('Connection established')
+                        console.log(event)
+                    });
+                    socket.addEventListener('message', (event) => {
+                        const message = JSON.parse(event.data)
+                        console.log(message)
+                    });
+                    socket.addEventListener('error', (error) => {
+                        console.error('WebSocket error:', error);
+                    });
                 }
             }
         }
-        // use the visitor_jwt cookie
-        // send request to the route
-        //  -> successfull: a websocket connection is made and chat can be sent and received
     } catch(err){
         console.log(err)
     }
@@ -472,16 +475,35 @@ export const openChat = async(widget_id) => {
 /**
  * Close the Chat
  */
-export const stopChat = (widget_id) => {
+export const stopChat = () => {
     try{
-        if(widget_id){
-            if(socket.url === `ws://localhost:8080/?id=${widget_id}`){
-                socket.close()
-                console.log(socket.url, 'close')
-            }
+        const token = getCookie('visitor_jwt');
+        if(socket && token){
+            socket.close()
+            console.log(socket.url, 'close')
         }
     } catch(err){
         console.log(err)
+    }
+}
+
+/**
+ * To send new chat in the room
+ */
+export const sendChat = (input) => {
+    if(input){
+        // get the chat message from the input
+        if(input.value !== ''){
+            // create the new chat object           
+            const new_chat = {
+                senderType: 'visitor',
+                content: input.value
+            };
+            // send it to the websocket server
+            socket.send(JSON.stringify(new_chat));
+        } else if(!input.value || input.value === ''){
+            input.value === ''
+        }
     }
 }
 

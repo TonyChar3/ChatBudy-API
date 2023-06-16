@@ -51,9 +51,9 @@ const uniqueUserHash = async() => {
     } while (hash_flag === true);
 }
 
-  /**
-   * Visitor unique Identifier generator
-   */
+/**
+* Visitor unique Identifier generator
+*/
 const uniqueVisitorID = async(array_id) => {
     // generate the random id
     let visitor_uid;

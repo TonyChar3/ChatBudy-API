@@ -14,6 +14,7 @@ import { corsOptions } from './middleware/getOrigins.js';
 import cookieParser from 'cookie-parser';
 import { webSocketServerSetUp } from './config/webSockets.js';
 
+
 const credentials = JSON.parse(fs.readFileSync('./firebaseKey/salezy-4de15-firebase-adminsdk-vql86-b2b376decd.json'))
 
 admin.initializeApp({
@@ -36,7 +37,6 @@ app.use(cors(corsOptions));
 app.use(helmet());
 
 app.use(cookieParser());
-
 
 // User routes
 app.use('/user', userRoutes);

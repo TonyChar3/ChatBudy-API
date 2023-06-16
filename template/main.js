@@ -1,4 +1,4 @@
-import { styles, LoadUpsequence, openChat, stopChat } from "./asset.js";
+import { styles, LoadUpsequence, openChat, stopChat, sendChat } from "./asset.js";
 
 class SalezyWidget {
 
@@ -18,6 +18,8 @@ class SalezyWidget {
     this.openChat();
     this.stopChat = stopChat;
     this.stopChat();
+    this.sendChat = sendChat;
+    this.sendChat();
   }
   
 
@@ -72,6 +74,7 @@ class SalezyWidget {
     const sendIconElement = document.createElement("div");
     sendIconElement.innerHTML = `<i class="fa-sharp fa-light fa-paper-plane-top"></i>`;
     sendIconElement.classList.add("widget__icon", "widget__hidden");
+    sendIconElement.addEventListener('click', () => this.sendChat(this.chat_room_input));
     this.sendIcon = sendIconElement;
 
     /**
@@ -192,7 +195,7 @@ class SalezyWidget {
           </span>
         </div>
       </div>
-      <input type="text" placeholder="chat..." class="chat__input"/>
+      <input id="chat-room__input" type="text" placeholder="chat..." class="chat__input"/>
     `;
     this.chatRoomPage = chatRoomPage;
 
@@ -202,7 +205,9 @@ class SalezyWidget {
     const closeButton = this.widgetContainer.querySelector('.fa-chevron-down');
     const openSupport = this.widgetContainer.querySelector('.fa-question');
     const openChat = this.widgetContainer.querySelector('.goback-button__container');
+    const chat_room_input = this.widgetContainer.querySelector('#chat-room__input');
     this.supportIcon = openSupport;
+    this.chat_room_input = chat_room_input;
 
     closeButton.addEventListener("click", this.toggleOpen.bind(this));
     openSupport.addEventListener("click", this.changePage.bind(this));

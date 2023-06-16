@@ -13,7 +13,8 @@ const createChatRoom = asyncHandler(async(req,res,next) => {
         // decode the cookie and validate the JWT
         // const cookie_value = req.cookies
         const cookie_value = req.headers.authorization.split(' ')[1]
-        const decoded = await decodeJWT(cookie_value);
+
+        const decoded = await decodeJWT(cookie_value, 'Visitor');
         // add a new chat room to the chat collection array
         const user_chatroom = await ChatRoom.findById(u_hash);
         if(!user_chatroom){
@@ -24,13 +25,12 @@ const createChatRoom = asyncHandler(async(req,res,next) => {
         const newChat = {
             visitor: decoded.id
         }
-
+        // add it to the array
         const add_newroom = await user_chatroom.updateOne({
             $push: {
                 chat_rooms: newChat
             }
         });
-
         if(add_newroom){
             res.status(201).json({ message: "New room created" });
         } else {
@@ -59,8 +59,6 @@ const AuthForWS = asyncHandler(async(req,res,next) => {
         // add a new chat room to the chat collection array
         const user_chatroom = await ChatRoom.findById(user_hash);
         if(decoded && user_chatroom){
-            // if both are valid (hash and jwt)
-            console.log(decoded.id, user_hash)
             // -> create another JWT with both the hash and id from the jwt and return it
             const ws_JWT = await generateJWT(decoded.id, user_hash);
             if(ws_JWT){
@@ -86,7 +84,9 @@ const AuthForWS = asyncHandler(async(req,res,next) => {
 const sendChat = asyncHandler(async(req,res,next) => {
     try{
         // get the right room
-        // add the new chat
+        const { user_hash, visitor_id } = req.body
+        // find the room
+        // find the specific object and add push it inside the messages array
     } catch(err){
         res.status(500);
         next(err)
