@@ -1,4 +1,5 @@
 let socket;// variable for the WebSocket connection
+let chat_msg;
 
 export const styles = `
 
@@ -453,17 +454,7 @@ export const openChat = async(widget_id) => {
                 if(data){
                     // the WS connection will be made with the same jwt inside the params
                     socket = new WebSocket(`ws://localhost:8080?id=${data.wss_connection}`);
-                    socket.addEventListener('open', (event) => {
-                        console.log('Connection established')
-                        console.log(event)
-                    });
-                    socket.addEventListener('message', (event) => {
-                        const message = JSON.parse(event.data)
-                        console.log(message)
-                    });
-                    socket.addEventListener('error', (error) => {
-                        console.error('WebSocket error:', error);
-                    });
+                    return socket
                 }
             }
         }
@@ -480,7 +471,7 @@ export const stopChat = () => {
         const token = getCookie('visitor_jwt');
         if(socket && token){
             socket.close()
-            console.log(socket.url, 'close')
+            console.log('close')
         }
     } catch(err){
         console.log(err)

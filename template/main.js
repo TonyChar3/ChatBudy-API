@@ -22,7 +22,6 @@ class SalezyWidget {
     this.sendChat();
   }
   
-
   position = "";
   open = false;
   change = false;
@@ -74,7 +73,10 @@ class SalezyWidget {
     const sendIconElement = document.createElement("div");
     sendIconElement.innerHTML = `<i class="fa-sharp fa-light fa-paper-plane-top"></i>`;
     sendIconElement.classList.add("widget__icon", "widget__hidden");
-    sendIconElement.addEventListener('click', () => this.sendChat(this.chat_room_input));
+    sendIconElement.addEventListener('click', () => {
+      this.sendChat(this.chat_room_input)
+      this.chat_room_input.value = '';
+    });
     this.sendIcon = sendIconElement;
 
     /**
@@ -170,33 +172,24 @@ class SalezyWidget {
     `;
     this.supportPage = supportPage
     
+    /**
+     * The chat room page
+     */
     const chatRoomPage = document.createElement("div");
     chatRoomPage.classList.add("chatroom__wrapper");
-    chatRoomPage.innerHTML =  `
-      <div class="chatroom__container">
-        <div class="chatroom__chat left">
-          <span>
-            Test chat message
-          </span>
-        </div>
-        <div class="chatroom__chat right">
-          <span>
-            Test chat message
-          </span>
-        </div>
-        <div class="chatroom__chat right">
-          <span>
-            Test chat message
-          </span>
-        </div>
-        <div class="chatroom__chat right">
-          <span>
-            dwedewdewdewwheqwdqwedghywqgduwgdqywqudgywqudygeqwuidygeqwudygewqudygeqwygduywqegduyweqgd
-          </span>
-        </div>
-      </div>
-      <input id="chat-room__input" type="text" placeholder="chat..." class="chat__input"/>
-    `;
+
+    const chatRoomContainer = document.createElement("div");
+    chatRoomContainer.classList.add("chatroom__container");
+
+    const chatRoomInput = document.createElement("input");
+    chatRoomInput.setAttribute("id", "chat-room__input");
+    chatRoomInput.setAttribute("type", "text");
+    chatRoomInput.setAttribute("placeholder", "chat...");
+    chatRoomInput.classList.add("chat__input");
+
+    chatRoomPage.appendChild(chatRoomContainer);
+    chatRoomPage.appendChild(chatRoomInput);
+    this.chatRoomContainer = chatRoomContainer;
     this.chatRoomPage = chatRoomPage;
 
     this.widgetContainer.appendChild(supportPage);
@@ -248,12 +241,62 @@ class SalezyWidget {
   }
 
   /**
+   * Manage the chat room state
+   */
+  getChat(chat){
+    const { text, sender_type } = chat
+    console.log(chat)
+    // first check the sender type
+    if(sender_type.toString() === 'visitor'){
+      const chatBubbleDIV = document.createElement("div");
+      const chatTextSpan = document.createElement('span');
+
+      chatBubbleDIV.classList.add("chatroom__chat");
+      chatBubbleDIV.classList.add("right");
+      chatTextSpan.innerText = `${text}`
+      chatBubbleDIV.appendChild(chatTextSpan);
+      this.chatRoomContainer.appendChild(chatBubbleDIV);
+      this.chatRoomContainer.scrollTop = this.chatRoomContainer.scrollHeight
+    } else if (sender_type.toString() === 'agent'){
+      const chatBubbleDIV = document.createElement("div");
+      const chatTextSpan = document.createElement('span');
+
+      chatBubbleDIV.classList.add("chatroom__chat");
+      chatBubbleDIV.classList.add("left");
+      chatTextSpan.innerText = `${text}`
+      chatBubbleDIV.appendChild(chatTextSpan);
+      this.chatRoomContainer.appendChild(chatBubbleDIV);
+      this.chatRoomContainer.scrollTop = this.chatRoomContainer.scrollHeight
+    }
+  }
+
+  async handleChatRoomState(widget_id){
+    if(widget_id){
+      const socket = await this.openChat(widget_id);
+
+      if(socket){
+        socket.addEventListener('open', (event) => {
+          console.log('Connection established')
+          console.log(event)
+        });
+        socket.addEventListener('message', (event) => {
+            const chat = JSON.parse(event.data)
+            this.getChat(chat)
+        });
+        socket.addEventListener('error', (error) => {
+            console.error('WebSocket error:', error);
+        });
+      }
+    }
+  }
+
+  /**
    * Open or close the widget
    */
   toggleOpen(){
     this.open = !this.open;
     if(this.open) {
-      this.openChat(this.widgetID);
+      this.handleChatRoomState(this.widgetID);
       this.widgetIcon.classList.add("widget__hidden");
       this.sendIcon.classList.remove("widget__hidden");
       this.widgetContainer.classList.remove("content__hidden");

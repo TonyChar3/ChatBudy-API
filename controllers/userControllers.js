@@ -23,8 +23,6 @@ const registerUser = asyncHandler(async(req,res,next) => {
             // generate a unique user hash
             const u_hash = await uniqueUserHash();
             if(data && u_hash){
-                console.log(data)
-                console.log(u_hash)
                 //create the user and insert it in the DB
                 const user = await User.create({
                     _id: data.uid,

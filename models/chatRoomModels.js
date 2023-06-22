@@ -8,6 +8,10 @@ const chatMessageSchema = mongoose.Schema({
     sent_by: {
         type: String,
         required: true
+    },
+    sender_type: {
+        type: String,
+        required: true
     }
 },
 {
