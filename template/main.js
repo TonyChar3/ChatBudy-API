@@ -80,19 +80,10 @@ class SalezyWidget {
     this.sendIcon = sendIconElement;
 
     /**
-     * Span element for the support page
-     */
-    const supportIconElement = document.createElement("div");
-    supportIconElement.innerHTML = `<i class="fa-light fa-share"></i>`;
-    supportIconElement.classList.add("widget__icon", "widget__hidden");
-    this.supportSubmitIcon = supportIconElement;
-
-    /**
      * Append both icon to the container and add click event
      */
     buttonContainer.appendChild(this.widgetIcon);
     buttonContainer.appendChild(this.sendIcon);
-    buttonContainer.appendChild(this.supportSubmitIcon);
     
 
     /**
@@ -120,14 +111,15 @@ class SalezyWidget {
    * What is the content showed in the widget once it's open
    */
   createWidgetContent(){
+    /**
+     * The widget header section
+     */
+    // TODO: Add a space to add the company logo, put it on left side of the header along with the close button to the right
     this.widgetContainer.innerHTML = `
       <header class="widget__header">
         <div class="header-icons__container">
           <span class="close-icon">
             <i class="fa-regular fa-chevron-down chevron-icon"></i>
-          </span>
-          <span class="help-icon">
-            <i class="fa-solid fa-question support-icon"></i>
           </span>
         </div>
         <div class="widget-chatroom__header">
@@ -136,41 +128,6 @@ class SalezyWidget {
         </div>
       </header>
     `;
-
-    const supportPage = document.createElement("form")
-    supportPage.classList.add("hidden") 
-    supportPage.classList.add("widget-support__form")
-    supportPage.innerHTML = `
-      <div class="form__field">
-        <input
-          type="email"
-          id="email"
-          name="email"
-          placeholder="Enter your email" 
-        />
-      </div>
-      <div class="form__field">
-        <input
-          type="text"
-          id="subject"
-          name="subject"
-          placeholder="Enter Message Subject" 
-        />
-      </div>
-      <div class="form__field">
-        <textarea
-          id="message"
-          name="message"
-          placeholder="Enter your message"
-          rows="6"
-        ></textarea>
-      </div>
-      <div class="goback-button__container">
-        <i class="fa-regular fa-chevron-left goback-chevron__icon"></i>
-        <i class="fa-light fa-comment goback-chat__bubble"></i>
-      </div>
-    `;
-    this.supportPage = supportPage
     
     /**
      * The chat room page
@@ -192,19 +149,13 @@ class SalezyWidget {
     this.chatRoomContainer = chatRoomContainer;
     this.chatRoomPage = chatRoomPage;
 
-    this.widgetContainer.appendChild(supportPage);
     this.widgetContainer.appendChild(chatRoomPage);
 
     const closeButton = this.widgetContainer.querySelector('.fa-chevron-down');
-    const openSupport = this.widgetContainer.querySelector('.fa-question');
-    const openChat = this.widgetContainer.querySelector('.goback-button__container');
     const chat_room_input = this.widgetContainer.querySelector('#chat-room__input');
-    this.supportIcon = openSupport;
     this.chat_room_input = chat_room_input;
 
     closeButton.addEventListener("click", this.toggleOpen.bind(this));
-    openSupport.addEventListener("click", this.changePage.bind(this));
-    openChat.addEventListener("click", this.changePage.bind(this));
   }
 
   /**
@@ -277,7 +228,6 @@ class SalezyWidget {
       if(socket){
         socket.addEventListener('open', (event) => {
           console.log('Connection established')
-          console.log(event)
         });
         socket.addEventListener('message', (event) => {
             const chat = JSON.parse(event.data)
@@ -304,7 +254,6 @@ class SalezyWidget {
       this.createWidgetContent();
       this.widgetIcon.classList.remove("widget__hidden");
       this.sendIcon.classList.add("widget__hidden");
-      this.supportSubmitIcon.classList.add("widget__hidden");
       this.widgetContainer.classList.add("content__hidden");
       this.stopChat(this.widgetID);
       this.change = false;
@@ -314,25 +263,6 @@ class SalezyWidget {
   handleDOMContentLoaded(){
     console.log(this.widgetID)
     this.LoadUpsequence(this.widgetID)
-  }
-
-  /**
-   * Switch between the chat and support page
-   */
-  changePage(){
-    this.change = !this.change;
-    
-    if(this.change){
-      this.supportPage.classList.remove("hidden");
-      this.chatRoomPage.classList.add("hidden");
-      this.sendIcon.classList.add("widget__hidden");
-      this.supportSubmitIcon.classList.remove("widget__hidden");
-    } else {
-      this.supportPage.classList.add("hidden");
-      this.chatRoomPage.classList.remove("hidden");
-      this.sendIcon.classList.remove("widget__hidden");
-      this.supportSubmitIcon.classList.add("widget__hidden");
-    }
   }
 }
 

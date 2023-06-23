@@ -1,5 +1,4 @@
 let socket;// variable for the WebSocket connection
-let chat_msg;
 
 export const styles = `
 
@@ -66,9 +65,9 @@ export const styles = `
         display: none
     }
     .widget__header {
-        padding: 1rem 2rem 1.5rem;
+        padding: 1em;
         color: #fff;
-        border-radius: 15px;
+        border-radius: 15px 15px 0 0;
         background-color: #0c64f2;
     }
     .header-icons__container {
@@ -76,7 +75,7 @@ export const styles = `
         width: 100%;
         display: flex;
         flex-direction: row;
-        justify-content: space-between;
+        justify-content: flex-start;
         align-items: center;
     }
     #chatroom__title {
@@ -94,7 +93,8 @@ export const styles = `
         color: #1af033;
     }
     .widget-chatroom__header {
-        padding: .5em;
+        position: relative;
+        padding: .2em;
         display: flex;
         flex-direction: column;
         justify-content: start;
@@ -110,12 +110,11 @@ export const styles = `
         transition: transform .2s ease-in-out;
         border-radius: 15px;
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.1); 
-        background-color: white;
     }
     .close-icon {
         position: absolute;
         margin: .2em;
-        left: .5em;
+        right: .6em;
         cursor: pointer;
     }
     .chevron-icon {
@@ -150,27 +149,14 @@ export const styles = `
         width: 100%;
         border: none;
         border-radius: 15px;
-        padding: .7em 1em;
+        padding: .9em 1em;
         background-color: rgba(0.8, 0.8, 0.8, 0.1);
         outline: none;
     }
-    .form__field input:active,
-    .form__field textarea:active {
-        transform:scale(1.1);
-        transition: transform .2s ease;
-    }
-    .form__field input:focus,
-    .form__field textarea:focus {
+    .form__field textarea:focus,
+    .form__field textarea:hover{
         border: 1px solid #0c64f2;
         background-color: white;
-        transform:scale(1.05);
-        transition: transform .2s ease;
-    }
-    .form__field input:hover,
-    .form__field textarea:hover {
-        border: 1px solid #0c64f2;
-        background-color: white;
-        transform: scale(1.04);
         transition: transform .2s ease;
     }
     .form__field input {
@@ -205,12 +191,13 @@ export const styles = `
         width: 100%;
         display: flex;
         flex-direction: column;
+        justify-content: flex-end;
         transition: transform .2s ease;
         background-color: white;
-        border-radius: 15px;
+        border-radius: 0 0 15px 15px;
     }
     .chatroom__container {
-        height: 90%;
+        max-height: 90%;
         width: 100%;
         overflow-y: auto;
         display: grid;
@@ -223,7 +210,7 @@ export const styles = `
         display: inline-block;
         max-width: 38%;
         height: auto;
-        margin: 1.1em;
+        margin: 1.01em;
         border-radius: 0 0 10px 10px;
     }
     .chatroom__chat.left {
@@ -244,6 +231,7 @@ export const styles = `
         padding: .5em;
     }
     .chat__input {
+        max-height: 20%;
         max-width: 100%;
         padding: 1em;
         border-radius: 0 0 10px 10px;
@@ -251,18 +239,6 @@ export const styles = `
         font-size: 16px;
         border: none;
         outline: none;
-    }
-    .chat__input:hover{
-        border-radius: 10px;
-        border: 1px solid black;
-        transform: scale(1.04);
-        
-    }
-    .chat__input:focus{
-        transform: scale(1.01);
-    }
-    .chat__input:active{
-        transform: scale(1.02);
     }
     .visitor-welcome__wrapper.hidden {
         display: none;
