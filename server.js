@@ -13,6 +13,7 @@ import chatRoute from './routes/chatRoute.js';
 import { corsOptions } from './middleware/getOrigins.js';
 import cookieParser from 'cookie-parser';
 import { webSocketServerSetUp } from './config/webSockets.js';
+import redis from 'redis';
 
 
 const credentials = JSON.parse(fs.readFileSync('./firebaseKey/salezy-4de15-firebase-adminsdk-vql86-b2b376decd.json'))
@@ -24,6 +25,12 @@ admin.initializeApp({
 dotenv.config();
 
 connectDB();
+
+const REDIS_PORT = process.env.REDIS_PORT
+const redis_client = redis.createClient({
+    host: '127.0.0.1',
+    port: REDIS_PORT
+});
 
 const app = express();
 const port = process.env.PORT || 8000;
@@ -58,6 +65,9 @@ app.use('/connection', sseRoute);
 
 const server = app.listen(port, () => {
     console.log(`Server running on port ${port}`);
+    redis_client.connect().then(() => {
+        console.log('Redis cache is connected')
+        webSocketServerSetUp(redis_client, server);
+    })
 });
 
-webSocketServerSetUp(server);

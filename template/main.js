@@ -119,7 +119,7 @@ class SalezyWidget {
       <header class="widget__header">
         <div class="header-icons__container">
           <span class="close-icon">
-            <i class="fa-regular fa-chevron-down chevron-icon"></i>
+            <i class="fa-solid fa-arrow-right-from-arc"></i>
           </span>
         </div>
         <div class="widget-chatroom__header">
@@ -144,14 +144,30 @@ class SalezyWidget {
     chatRoomInput.setAttribute("placeholder", "chat...");
     chatRoomInput.classList.add("chat__input");
 
+    const chatRoomLineDivider = document.createElement("div");
+    chatRoomLineDivider.classList.add("chat__line-divider");
+
+    const chatRoomInputDivider = document.createElement("div");
+    chatRoomInputDivider.classList.add("chat__input-divider");
+
+    const chatRoomFooterContainer = document.createElement("div");
+    const chatRoomFooterLogo = document.createElement("div");
+    const chatRoomLogo = document.createElement("h2");
+    chatRoomLogo.textContent = "powered by ..."
+    chatRoomFooterContainer.classList.add("chat__footer");
+    chatRoomFooterLogo.appendChild(chatRoomLogo);
+    chatRoomFooterContainer.appendChild(chatRoomFooterLogo);
+
     chatRoomPage.appendChild(chatRoomContainer);
+    chatRoomPage.appendChild(chatRoomLineDivider);
     chatRoomPage.appendChild(chatRoomInput);
+    chatRoomPage.appendChild(chatRoomInputDivider);
+    chatRoomPage.appendChild(chatRoomFooterContainer);
     this.chatRoomContainer = chatRoomContainer;
     this.chatRoomPage = chatRoomPage;
-
     this.widgetContainer.appendChild(chatRoomPage);
 
-    const closeButton = this.widgetContainer.querySelector('.fa-chevron-down');
+    const closeButton = this.widgetContainer.querySelector('.fa-arrow-right-from-arc');
     const chat_room_input = this.widgetContainer.querySelector('#chat-room__input');
     this.chat_room_input = chat_room_input;
 
@@ -182,13 +198,6 @@ class SalezyWidget {
     document.head.appendChild(link1);
     document.head.appendChild(link2);
     document.head.appendChild(link3);
-  }
-
-  /**
-   * Welcome the user when it's his first visit
-   */
-  welcomeVisitor() {
-
   }
 
   /**
@@ -227,6 +236,7 @@ class SalezyWidget {
 
       if(socket){
         socket.addEventListener('open', (event) => {
+          console.log(event)
           console.log('Connection established')
         });
         socket.addEventListener('message', (event) => {

@@ -1,7 +1,6 @@
 let socket;// variable for the WebSocket connection
 
 export const styles = `
-
     .widget__content * {
         box-sizing: border-box;
         scroll-behavior: smooth;
@@ -16,7 +15,7 @@ export const styles = `
         align-items: center;
         width: 100%;
         height: 100%;
-        border-radius: 50%;
+        border-radius: 15px;
         cursor: pointer;
         transition: transform .6s ease-in-out;
         color: white;
@@ -35,9 +34,10 @@ export const styles = `
         border: none;
         width: 60px;
         height: 60px;
-        border-radius: 50%;
+        border-radius: 15px;
         cursor: pointer;
         background-color: #0c64f2;
+        box-shadow: -3px 0px 19px -3px rgba(0,0,0,0.4);
     }
     .widget-button__container:hover {
         transform: scale(1.1);
@@ -61,14 +61,14 @@ export const styles = `
     .chatroom__wrapper.hidden {
         display: none;
     }
-    form.hidden {
-        display: none
-    }
     .widget__header {
         padding: 1em;
         color: #fff;
         border-radius: 15px 15px 0 0;
         background-color: #0c64f2;
+        box-shadow: inset 0px -26px 31px -30px rgba(255,255,255,0.9);
+        border-bottom: 1px;
+        boder-color: transparent;
     }
     .header-icons__container {
         padding: .4em;
@@ -109,7 +109,9 @@ export const styles = `
         position: absolute;
         transition: transform .2s ease-in-out;
         border-radius: 15px;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.1); 
+        box-shadow: -3px 0px 19px -3px rgba(0,0,0,0.4);
+        scrollbar-width: thin;
+        scrollbar-color: #c9c8c5 transparent;
     }
     .close-icon {
         position: absolute;
@@ -118,7 +120,7 @@ export const styles = `
         cursor: pointer;
     }
     .chevron-icon {
-        font-size: 1.2rem;
+        font-size: 1.4rem;
         color: white;
     }
     .help-icon {
@@ -126,68 +128,9 @@ export const styles = `
         right: .8em;
         cursor: pointer;
     }
-    .support-icon {
-        font-size: 1.05rem;
-        color: white;
-    }
-    .widget-support__form {
-        height: 100%;
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        font-family: 'Noto Sans', sans-serif;
-        transition: transform .2s ease;
-        padding: 1em;
-        background-color: white;
-        border-radius: 15px;
-    }
-    form .form__field {
-        margin-bottom: 1.5em;
-    }
-    .form__field input,
-    .form__field textarea {
-        width: 100%;
-        border: none;
-        border-radius: 15px;
-        padding: .9em 1em;
-        background-color: rgba(0.8, 0.8, 0.8, 0.1);
-        outline: none;
-    }
-    .form__field textarea:focus,
-    .form__field textarea:hover{
-        border: 1px solid #0c64f2;
-        background-color: white;
-        transition: transform .2s ease;
-    }
-    .form__field input {
-        height: 48px;
-    }
-    .form__field textarea {
-        resize: none;
-    }
-    .form__field textarea::placeholder {
-        font-size: 1.1rem;
-        font-family: 'Noto Sans', sans-serif;
-    }
-    .goback-button__container {
-        position: relative;
-        width: 10%;
-        margin-bottom: .4em;
-        display: flex;
-        justify-content: start;
-    }
-    .goback-chevron__icon,
-    .goback-chat__bubble {
-        font-size: 1.1rem;
-        color: #0c64f2;
-        cursor: pointer;
-    }
-    .goback-chevron__icon {
-        margin-right: .4em;
-    }
     .chatroom__wrapper {
         font-family: 'Noto Sans', sans-serif;
-        height: 390px;
+        height: 430px;
         width: 100%;
         display: flex;
         flex-direction: column;
@@ -204,7 +147,7 @@ export const styles = `
         grid-template-columns: 1fr;
         background-color: rgba(255,255,255,0.6);
         background-attachment: fixed;
-        border-bottom: 1px solid black;
+        transition: all 0.3s ease-in-out;
     }
     .chatroom__chat {
         display: inline-block;
@@ -230,90 +173,53 @@ export const styles = `
         max-width: 100%;
         padding: .5em;
     }
+    .chat__line-divider {
+        width: 90%;
+        height: 2px;
+        margin: .1em auto;
+        background-color: #c9c8c5;
+    }
+    .chat__input-divider {
+        width: 8%;
+        height: 2px;
+        margin: 0 auto;
+        background-color: #c9c8c5;
+    }
     .chat__input {
         max-height: 20%;
         max-width: 100%;
         padding: 1em;
-        border-radius: 0 0 10px 10px;
         color: #gray-500;
         font-size: 16px;
         border: none;
         outline: none;
     }
-    .visitor-welcome__wrapper.hidden {
-        display: none;
-    }
-    .visitor-welcome__wrapper {
-        font-family: 'Noto Sans', sans-serif;
-        height: 350px;
+    .chat__footer {
         width: 100%;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        padding: .5em;
-        transition: transform .2s ease;
+        padding: .4em .5em;
+        border-radius: 0 0 10px 10px;
     }
-    .visitor-welcome__form {
-        width: 80%;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        border: 1px solid #0c64f2;
-        border-radius: 15px;
+    .chat__footer h2 {
+        font-size: 0.70rem;
+        color: #6e6e6e;
     }
-    .visitor-welcome__header {
-        padding: .5em;
-        margin: 1em;
-        display: flex;
-        flex-direction: row;
-        align-items: center;
+    .widget__content ::-webkit-scrollbar {
+        width: 6px;
     }
-    .visitor-welcome__header h3 {
-        font-size: 1.4rem;
-        color: #0c64f2;
-        margin-right: .3em;
+    .widget__content ::-webkit-scrollbar-track {
+        background-color: transparent;
+    } 
+    .widget__content ::-webkit-scrollbar-thumb {
+        margin: .2em;
+        background-color: transparent;
+        border-radius: 4px;
     }
-    .info-icon {
-        cursor: pointer;
-    }
-    .info-icon:active {
-        transform:scale(0.90);
-        transition: transform .2s ease;
-    }
-    .visitor-welcome__information {
-        position: relative;
-        bottom: 5%;
-        text-decoration: underline;
-    }
-    .visitor-welcome__hidden {
-        display: none;
-    }
-    .visitor-welcome__button-container {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-    }
-    .visitor-welcome__button-container button {
-        padding: .5em;
-        margin-bottom: 1.05em;
-        border:none;
-        font-size: 1.02rem;
-        color: white;
-        background-color: #0c64f2;
-        border-radius: 15px;
-    }
-    .visitor-welcome__button-container p {
-        font-size: 1.01rem;
-        text-decoration: underline;
-        color: #0c64f2;
-        cursor: pointer;
-    }
-    .visitor-welcome__button-container button:active {
-        transform:scale(0.90);
-        transition: transform .2s ease;
+    @media (min-width: 1024px) {
+        .widget__content ::-webkit-scrollbar-thumb {
+            margin: .2em;
+            background-color: #c9c8c5;
+            border-radius: 4px;
+        }
     }
 `;
 
