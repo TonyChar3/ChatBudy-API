@@ -94,4 +94,17 @@ const currentUser = asyncHandler(async(req,res,next) => {
     }
 });
 
+//@desc Connect the user to a chatroom
+//@route POST /user/connect-chat
+//@access PRIVATE
+const connectChatUserr = asyncHandler(async(req,res,next) => {
+    try{
+        // receive the visitor id and the user hash
+        // generate a JWT for auth into the websocket connection
+        // verify it and send back the jwt to the frontend
+    } catch(err){
+        console.log(err)
+    }
+}); 
+
 export { registerUser, updateProfile, currentUser }

@@ -3,8 +3,8 @@ import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import { getVisitorBrowser, realTimeUpdated, generateJWT, generateRandomID } from '../utils/manageVisitors.js';
 import Visitor from '../models/visitorsModels.js';
+import Chatroom from '../models/chatRoomModels.js';
 import User from '../models/userModels.js';
-import admin from 'firebase-admin';
 import { sendUpdateToUser } from '../controllers/sseControllers.js';
 
 dotenv.config();
@@ -76,41 +76,7 @@ const createVisitor = asyncHandler(async(req,res,next) => {
     }
 });
 
-//@desc Route to get all of the visitors in the array
-//@route GET /visitor/all-visitor
-//@access PRIVATE
-const fetchAllVisiotr = asyncHandler(async(req,res,next) => {
-    try{
-        const token = req.headers.authorization.split(' ')[1]
-        const decodedToken = await admin.auth().verifyIdToken(token)
-
-        if(decodedToken){
-            const user = await User.findById(decodedToken.uid)
-            if(!user){
-                res.status(500);
-                throw new Error("Unable to find your visitor array...please reload and try again")
-            }
-    
-            const visitor_array = await Visitor.findById(user.user_access);
-            if(!visitor_array){
-                res.status(500);
-                throw new Error("Unable to find your visitor array...please reload and try again")
-            }
-    
-            if(visitor_array.visitor.length === 0) {
-                sendUpdateToUser(user._id, { message: "No visitors" });
-                res.send({ message: "No visitors"});
-            } else {
-                sendUpdateToUser(user._id, visitor_array.visitor);
-                res.status(201);
-            }
-        }
-    } catch(err){
-        next(err);
-    }
-});
-
-//@desc Route to delete a specific visitor
+//@desc Route to delete a specific visitor along with the chatroom
 //@route DELETE /visitor/delete-visitor
 //@access PRIVATE
 const deleteVisitor = asyncHandler( async(req,res,next) => {
@@ -121,15 +87,23 @@ const deleteVisitor = asyncHandler( async(req,res,next) => {
         const userUID = await User.findOne({ user_access: u_hash })
         // find the visitor object in the collection
         const user_visitors = await Visitor.findById(u_hash);
-        if(!user_visitors || !userUID){
+        // find the chatroom collection of the user
+        const user_chatrooms = await Chatroom.findById(u_hash);
+        if(!user_visitors || !userUID || !user_chatrooms){
             res.status(500);
         }
         // loop through the visitor array and check for the matching _id
         const visitor_index = user_visitors.visitor.findIndex(visitr => visitr._id.toString() === visitor_id.toString())
-        if(visitor_index !== -1){
+        //loop through his chatrooms to find the room
+        const chatroom_index = user_chatrooms.chat_rooms.findIndex(rooms => rooms.visitor.toString() === visitor_id.toString())
+        if(visitor_index !== -1 && chatroom_index !== -1){
             user_visitors.visitor.splice(visitor_index, 1);
-            const save = await user_visitors.save();
-            if(save){
+            user_chatrooms.chat_rooms.splice(chatroom_index,1);
+
+            const save_visitor = await user_visitors.save();
+            const save_chatroom = await user_chatrooms.save();
+
+            if(save_visitor && save_chatroom){
                 sendUpdateToUser(userUID._id, user_visitors.visitor)
                 res.status(200).json({ message: "Visitor removed" });
             }
@@ -159,4 +133,4 @@ const updateVisitor = asyncHandler(async(req,res,next) => {
 });
 
 
-export { visitorInfoFetch, createVisitor, fetchAllVisiotr, deleteVisitor, updateVisitor }
+export { visitorInfoFetch, createVisitor, deleteVisitor, updateVisitor }

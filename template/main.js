@@ -5,6 +5,7 @@ class SalezyWidget {
   constructor(position = "bottom-right") {
     this.position = this.getPosition(position);// save the position of the widget
     this.widgetID = "__HASH__";// To identify the widget for each request he makes
+    this.DOMLoaded = false;
     this.welcome = false;// state of the widget if the user want to give his email or not
     this.open = false;// the state of the widget Open/Close
     this.change = false;// state of the page to show in the widget
@@ -13,7 +14,7 @@ class SalezyWidget {
     this.initialize();// To invoke and display the UI for our widget in the DOM
     this.injectStyles();// To invoke and add the styling
     this.LoadUpsequence = LoadUpsequence;
-    this.LoadUpsequence(this.widgetID);
+    this.LoadUpsequence();
     this.openChat = openChat;
     this.openChat();
     this.stopChat = stopChat;
@@ -92,7 +93,7 @@ class SalezyWidget {
     this.widgetContainer = document.createElement('div');
     this.widgetContainer.classList.add("widget__content");
     this.widgetContainer.classList.add("content__hidden");
-    document.addEventListener("DOMContentLoaded", () => this.LoadUpsequence(this.widgetID))
+    document.addEventListener("DOMContentLoaded", () => this.handleDOMContentLoaded())
   
     /**
      * Invoke the createWidget Method
@@ -270,9 +271,15 @@ class SalezyWidget {
     }
   }
 
+  /**
+   * Handle the DOM content load
+   */
   handleDOMContentLoaded(){
-    console.log(this.widgetID)
-    this.LoadUpsequence(this.widgetID)
+    if(!this.DOMLoaded){
+      console.log("loading...")
+      this.LoadUpsequence(this.widgetID);
+      this.DOMLoaded = true;
+    }
   }
 }
 

@@ -1,11 +1,10 @@
-import { MaxKey, MinKey } from 'mongodb';
+
 import Chatroom from '../models/chatRoomModels.js';
 import dotenv from 'dotenv';
 
 
 dotenv.config();
 
-let new_msg = [];
 const chat_rooms = new Map();
 
 /**

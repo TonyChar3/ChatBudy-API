@@ -1,6 +1,7 @@
 import asyncHandler from "express-async-handler";
 import { decodeJWT, generateJWT } from '../utils/manageVisitors.js';
 import ChatRoom from '../models/chatRoomModels.js';
+import admin from 'firebase-admin';
 
 
 //@desc Route to create a new chat room with the visitor
