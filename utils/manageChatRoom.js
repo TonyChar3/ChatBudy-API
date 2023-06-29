@@ -1,4 +1,3 @@
-
 import Chatroom from '../models/chatRoomModels.js';
 import dotenv from 'dotenv';
 
@@ -19,11 +18,9 @@ const saveChat = async(method, user_hash, visitor_id, new_chat) => {
                 const room_exist = chat_rooms.get(visitor_id)
                 if(room_exist){
                     room_exist.push(new_chat);
-                    console.log("updated...", room_exist)
                     break;
                 } else if(!room_exist){
                     chat_rooms.set(visitor_id, [new_chat])
-                    console.log("new chat:", chat_rooms)
                     break;
                 }
             case 'SAVE':
@@ -89,18 +86,33 @@ const saveChat = async(method, user_hash, visitor_id, new_chat) => {
 /**
  * Function to check the cache and always make sure it exist before caching a new one
  */
-const verifyCache = async(client, visitor_id, chat_obj) => {
+const verifyCache = async(verify_mode, client, visitor_id, chat_obj) => {
     try{
-        const visitor_cache = await client.get(visitor_id)
-        if(visitor_cache){
-            // if found in the cache just return
-            return visitor_cache
-            // return visitor_cache
-        } else if(!visitor_cache && chat_obj) {
-            // if not found cache it and return
-            await client.set(visitor_id, JSON.stringify(chat_obj));
-            return
+        switch (verify_mode){
+            case "Visitor_chat":
+                const visitor_cache = await client.get(visitor_id)
+                if(visitor_cache){
+                    // if found in the cache just return
+                    return visitor_cache
+                    
+                    // return visitor_cache
+                } else if(!visitor_cache && chat_obj) {
+                    // if not found cache it and return
+                    await client.set(visitor_id, JSON.stringify(chat_obj));
+                    return
+                }
+                break;
+            
+            case "User_chat":
+                const cached_room = await client.get(visitor_id)
+                if(cached_room){
+                    return cached_room
+                } 
+                break;
+            default:
+                break;
         }
+
     } catch(err){
         console.log(err)
     }

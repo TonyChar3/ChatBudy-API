@@ -33,23 +33,26 @@ const AuthSSEconnection = asyncHandler(async(req,res,next) => {
 //@access PRIVATE
 const SSEconnection = asyncHandler(async(req,res,next) => {
     try{
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
-        res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
-                
-        res.write('SSE connection started\n\n');
-        connections.set(connectedUser.id, res);
-        fetchAllVisitor()
-        
-        res.on("error", (error) => {
-            console.log(error)
-            connections.delete(connectedUser);
-        })
+        if(connectedUser){
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+            res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
+                    
+            res.write('SSE connection started\n\n');
+
+            connections.set(connectedUser.id, res);
+            fetchAllVisitor()
             
-        res.on('close', () => {
-            connections.delete(connectedUser);
-        });
+            res.on("error", (error) => {
+                console.log(error)
+                connections.delete(connectedUser);
+            })
+                
+            res.on('close', () => {
+                connections.delete(connectedUser);
+            });
+        }
     } catch(err){
         console.log(err)
         next(err)

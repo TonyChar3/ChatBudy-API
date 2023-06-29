@@ -247,6 +247,9 @@ class SalezyWidget {
         socket.addEventListener('error', (error) => {
             console.error('WebSocket error:', error);
         });
+        return () => {
+          socket.close();
+        }
       }
     }
   }

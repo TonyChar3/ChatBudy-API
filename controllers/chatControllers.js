@@ -1,7 +1,9 @@
 import asyncHandler from "express-async-handler";
 import { decodeJWT, generateJWT } from '../utils/manageVisitors.js';
+import { verifyCache } from "../utils/manageChatRoom.js";
 import ChatRoom from '../models/chatRoomModels.js';
 import admin from 'firebase-admin';
+import { redis_client } from "../server.js";
 
 
 //@desc Route to create a new chat room with the visitor
@@ -67,7 +69,6 @@ const AuthForWS = asyncHandler(async(req,res,next) => {
                 if(deco){
                     res.status(201).json({ wss_connection: ws_JWT.jwtToken });
                 }
-                
             } else {
                 res.status(500);
                 throw new Error("Unable to generate a new jwt for WS connection...please try again")
@@ -78,6 +79,31 @@ const AuthForWS = asyncHandler(async(req,res,next) => {
         next(err)
     }
 });
+
+//@desc Route to give access to authenticated user the WS connection
+//@route POST /chat/user-auth-ws
+//@access PRIVATE
+const UserAuthWS = asyncHandler(async(req,res,next) => {
+    try{
+        // get both the user and visitor id from the Req
+        const { visitor_id, user_hash } = req.body.data
+        // get the user accessToken
+        const token = req.headers.authorization.split(' ')[1]
+        // check it using Firebase admin
+        const verify_token = admin.auth().verifyIdToken(token)
+        if(verify_token){
+            const ws_token = await generateJWT(visitor_id, user_hash)
+            if(ws_token){
+                res.status(201).send({ wss_jwt: ws_token.jwtToken})
+            } else {
+                res.status(500);
+            }
+        }
+        // generate a JWT and send it back to the front-end
+    } catch(err){
+        console.log(err)
+    }
+}); 
 
 //@desc Route to send new chat
 //@route POST /chat/send
@@ -108,5 +134,38 @@ const deleteChat = asyncHandler(async(req,res,next) => {
     }
 });
 
+//@desc Route to fetch the active chatrooms
+//@route POST /chat/fetch-active-rooms
+//@access PRIVATE
+const fetchActiveRooms = asyncHandler(async(req,res,next) => {
+    try{
+        // get the user hash from the req
+        const { user_hash, chatroom_id } = req.body.data
+        // verify the cache for the active rooms
+        if(chatroom_id){
+            const verify_cache = await verifyCache("User_chat", redis_client, chatroom_id)
+            if(verify_cache){
+                console.log("Cache")
+                res.status(200).send({ room: JSON.parse(verify_cache) })
+            } else if(!verify_cache){
+                const fetch_room = await ChatRoom.findById(user_hash)
+                if(fetch_room){
+                    const room_index = fetch_room.chat_rooms.findIndex(rooms => rooms.visitor.toString() === chatroom_id.toString())
+                    if(room_index !== -1){
+                        const active_room = fetch_room.chat_rooms[room_index]
+                        await redis_client.set(chatroom_id, JSON.stringify(active_room))
+                        console.log("mongo")
+                        res.status(200).send({ room: active_room })
+                    } else {
+                        res.status(404);
+                    }
+                }
+            }
+        }
+    } catch(err){
+        next(err)
+    }
+});
 
-export { createChatRoom, sendChat, deleteChat, AuthForWS }
+
+export { createChatRoom, sendChat, deleteChat, AuthForWS, fetchActiveRooms, UserAuthWS }

@@ -71,3 +71,5 @@ const server = app.listen(port, () => {
     })
 });
 
+export { redis_client }
+

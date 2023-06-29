@@ -25,11 +25,14 @@ export const webSocketServerSetUp = (redis_client, server) => {
                 return;
             } else if(decodeT.id && decodeT.userHash) {
                 // check the cache
-                const chat_room_cache = await verifyCache(redis_client, decodeT.id)
+                const chat_room_cache = await verifyCache("Visitor_chat",redis_client, decodeT.id)
                 if(chat_room_cache){
                     userHash = decodeT.userHash
                     visitorID = decodeT.id
-                    connections.set(decodeT.id, JSON.parse(chat_room_cache))
+                    const check_duplicate = connections.get(decodeT.id)
+                    if(!check_duplicate){
+                        connections.set(decodeT.id, JSON.parse(chat_room_cache))
+                    }
                     console.log('cached room')
                 } else if(!chat_room_cache){
                     // fetch the chatroom
@@ -40,7 +43,7 @@ export const webSocketServerSetUp = (redis_client, server) => {
                             userHash = decodeT.userHash
                             visitorID = decodeT.id
                             connections.set(decodeT.id, chat_room.chat_rooms[room_index])
-                            await verifyCache(redis_client, decodeT.id, chat_room.chat_rooms[room_index])
+                            await verifyCache("Visitor_chat",redis_client, decodeT.id, chat_room.chat_rooms[room_index])
                             console.log('freshly fetched room')
                         } 
                     }
