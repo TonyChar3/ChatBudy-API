@@ -134,38 +134,5 @@ const deleteChat = asyncHandler(async(req,res,next) => {
     }
 });
 
-//@desc Route to fetch the active chatrooms
-//@route POST /chat/fetch-active-rooms
-//@access PRIVATE
-const fetchActiveRooms = asyncHandler(async(req,res,next) => {
-    try{
-        // get the user hash from the req
-        const { user_hash, chatroom_id } = req.body.data
-        // verify the cache for the active rooms
-        if(chatroom_id){
-            const verify_cache = await verifyCache("User_chat", redis_client, chatroom_id)
-            if(verify_cache){
-                console.log("Cache")
-                res.status(200).send({ room: JSON.parse(verify_cache) })
-            } else if(!verify_cache){
-                const fetch_room = await ChatRoom.findById(user_hash)
-                if(fetch_room){
-                    const room_index = fetch_room.chat_rooms.findIndex(rooms => rooms.visitor.toString() === chatroom_id.toString())
-                    if(room_index !== -1){
-                        const active_room = fetch_room.chat_rooms[room_index]
-                        await redis_client.set(chatroom_id, JSON.stringify(active_room))
-                        console.log("mongo")
-                        res.status(200).send({ room: active_room })
-                    } else {
-                        res.status(404);
-                    }
-                }
-            }
-        }
-    } catch(err){
-        next(err)
-    }
-});
 
-
-export { createChatRoom, sendChat, deleteChat, AuthForWS, fetchActiveRooms, UserAuthWS }
+export { createChatRoom, sendChat, deleteChat, AuthForWS, UserAuthWS }

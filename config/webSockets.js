@@ -11,14 +11,14 @@ export const webSocketServerSetUp = (redis_client, server) => {
     let visitorID;
     let userHash;
 
-    const connections = new Map();// Map to track the connections
+    const connections = new Map();// Map to track the chatrooms object
+    const wss_connections = new Map();//Map to track the right WebSocket connections
     const wss = new WebSocketServer({ noServer: true });
 
     server.on('upgrade', async(req, socket, head) => {
         try{
             const jwt_connect = new URL(req.url, 'http://localhost:8080').searchParams.get('id');
             const decodeT = await decodeJWT(jwt_connect, 'WS');
-
             if(!decodeT.id || !decodeT.userHash) {
                 socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
                 socket.destroy();
@@ -71,15 +71,26 @@ export const webSocketServerSetUp = (redis_client, server) => {
             socket.destroy();
         }
     });
-    
     wss.on('connection',(ws, req) => {
         let new_msg = {}
         const ws_chatroom = connections.get(visitorID)
-        ws["room"] = ws_chatroom
+        ws["id"] = visitorID
+        if(!wss_connections.get(visitorID)){
+            wss_connections.set(visitorID,[ws])
+            ws.send(JSON.stringify(`connected to room:${ws.id}`))
+            ws_chatroom.messages.forEach(element => {
+                ws.send(JSON.stringify(element))
+            });
+        } else {
+            const connect_array = wss_connections.get(visitorID)
+            connect_array.push(ws)
+            ws.send(JSON.stringify(`connected to room:${ws.id}`))
+            ws_chatroom.messages.forEach(element => {
+                ws.send(JSON.stringify(element))
+            });
+        }
+        const user_ws_connected = wss_connections.get(visitorID)
 
-        ws_chatroom.messages.forEach(element => {
-            ws.send(JSON.stringify(element))
-        })
         ws.on('message', async(msg, isBinary) => {
             if(ws.readyState === WebSocket.OPEN){
                 const received_msg = JSON.parse(msg)
@@ -102,17 +113,19 @@ export const webSocketServerSetUp = (redis_client, server) => {
                         break;
                 }
                 if(Object.keys(new_msg).length !== 0){
-                    if(ws.room.visitor.toString() === new_msg.sent_by.toString()){
+                    if(ws.id.toString() === ws_chatroom.visitor.toString()){
                         ws_chatroom.messages.push(new_msg)
                         // send it to the front-end
-                        ws.send(JSON.stringify(new_msg), { binary: isBinary });
+                        user_ws_connected.forEach(connections => {
+                            connections.send(JSON.stringify(new_msg), { binary: isBinary });
+                        })
                     }
                 }
             }
             try{
-                await saveChat('ADD', userHash, ws.room.visitor, new_msg)
+                await saveChat('ADD', userHash, ws.id, new_msg)
                 // cache it inside Redis server
-                const caching_msg = await redis_client.set(ws.room.visitor, JSON.stringify(ws_chatroom), 'EX', 86400)
+                const caching_msg = await redis_client.set(ws.id, JSON.stringify(ws_chatroom), 'EX', 86400)
                 if(caching_msg){
                     console.log('New message cached')
                 }
@@ -122,12 +135,11 @@ export const webSocketServerSetUp = (redis_client, server) => {
             }
         });
         ws.on('error', async(error) => {
-            await saveChat('SAVE', userHash, ws.room.visitor)
-            console.log(error);
+            await saveChat('SAVE', userHash, ws.id)
             ws.close();
         });
         ws.on('close', async() => {
-            await saveChat('SAVE', userHash, ws.room.visitor)
+            await saveChat('SAVE', userHash, ws.id)
         });
     });
 }

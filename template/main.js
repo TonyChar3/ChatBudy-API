@@ -208,7 +208,7 @@ class SalezyWidget {
     const { text, sender_type } = chat
     console.log(chat)
     // first check the sender type
-    if(sender_type.toString() === 'visitor'){
+    if(sender_type === 'visitor'){
       const chatBubbleDIV = document.createElement("div");
       const chatTextSpan = document.createElement('span');
 
@@ -218,7 +218,7 @@ class SalezyWidget {
       chatBubbleDIV.appendChild(chatTextSpan);
       this.chatRoomContainer.appendChild(chatBubbleDIV);
       this.chatRoomContainer.scrollTop = this.chatRoomContainer.scrollHeight
-    } else if (sender_type.toString() === 'agent'){
+    } else if (sender_type === 'agent'){
       const chatBubbleDIV = document.createElement("div");
       const chatTextSpan = document.createElement('span');
 
@@ -236,6 +236,7 @@ class SalezyWidget {
       const socket = await this.openChat(widget_id);
 
       if(socket){
+        console.log(socket)
         socket.addEventListener('open', (event) => {
           console.log(event)
           console.log('Connection established')
