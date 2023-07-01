@@ -48,7 +48,7 @@ const createChatRoom = asyncHandler(async(req,res,next) => {
     }
 });
 
-//@desc Route to initiate the Chat using Socket.io
+//@desc Route to initiate the Chat for the Visitor
 //@route POST /chat/auth-ws
 //@access PRIVATE
 const AuthForWS = asyncHandler(async(req,res,next) => {
@@ -56,6 +56,7 @@ const AuthForWS = asyncHandler(async(req,res,next) => {
         // receive the user hash
         const { user_hash } = req.body
         // decode the cookie and validate the JWT
+        //TODO: Uncomment this for production to use httpOnly cookies
         // const cookie_value = req.cookies
         const cookie_value = req.headers.authorization.split(' ')[1]
         const decoded = await decodeJWT(cookie_value, 'Visitor');
@@ -65,7 +66,7 @@ const AuthForWS = asyncHandler(async(req,res,next) => {
             // -> create another JWT with both the hash and id from the jwt and return it
             const ws_JWT = await generateJWT(decoded.id, user_hash);
             if(ws_JWT){
-                const deco = await decodeJWT(ws_JWT.jwtToken, 'WS')
+                const deco = await decodeJWT(ws_JWT.jwtToken, 'WS');
                 if(deco){
                     res.status(201).json({ wss_connection: ws_JWT.jwtToken });
                 }
@@ -98,8 +99,10 @@ const UserAuthWS = asyncHandler(async(req,res,next) => {
             } else {
                 res.status(500);
             }
+        } else if(!verify_token){
+            // return error FORBIDDEN
+            res.status(403);
         }
-        // generate a JWT and send it back to the front-end
     } catch(err){
         console.log(err)
     }

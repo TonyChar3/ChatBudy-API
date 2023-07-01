@@ -19,6 +19,7 @@ export const webSocketServerSetUp = (redis_client, server) => {
         try{
             const jwt_connect = new URL(req.url, 'http://localhost:8080').searchParams.get('id');
             const decodeT = await decodeJWT(jwt_connect, 'WS');
+            // Decode the sent JWT and check if the data inside is valid
             if(!decodeT.id || !decodeT.userHash) {
                 socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
                 socket.destroy();
@@ -48,7 +49,8 @@ export const webSocketServerSetUp = (redis_client, server) => {
                         } 
                     }
                 }
-                if(connections){
+                // Connect the user after auth to a WebSocket connection
+                if(connections.get(visitorID)){
                     try{
                         wss.handleUpgrade(req, socket, head, (ws) => {
                             socket.removeListener('error', () => {
@@ -63,6 +65,9 @@ export const webSocketServerSetUp = (redis_client, server) => {
                         console.log(err)
                         socket.destroy();
                     }
+                } else {
+                    socket.write('HTTP/1.1 500 Server Error\r\n\r\n');
+                    socket.destroy();
                 }
             }
         } catch(err){
@@ -71,23 +76,18 @@ export const webSocketServerSetUp = (redis_client, server) => {
             socket.destroy();
         }
     });
+
     wss.on('connection',(ws, req) => {
         let new_msg = {}
         const ws_chatroom = connections.get(visitorID)
         ws["id"] = visitorID
         if(!wss_connections.get(visitorID)){
             wss_connections.set(visitorID,[ws])
-            ws.send(JSON.stringify(`connected to room:${ws.id}`))
-            ws_chatroom.messages.forEach(element => {
-                ws.send(JSON.stringify(element))
-            });
+            ws.send(JSON.stringify(ws_chatroom.messages))
         } else {
             const connect_array = wss_connections.get(visitorID)
             connect_array.push(ws)
-            ws.send(JSON.stringify(`connected to room:${ws.id}`))
-            ws_chatroom.messages.forEach(element => {
-                ws.send(JSON.stringify(element))
-            });
+            ws.send(JSON.stringify(ws_chatroom.messages))
         }
         const user_ws_connected = wss_connections.get(visitorID)
 
@@ -118,7 +118,7 @@ export const webSocketServerSetUp = (redis_client, server) => {
                         // send it to the front-end
                         user_ws_connected.forEach(connections => {
                             connections.send(JSON.stringify(new_msg), { binary: isBinary });
-                        })
+                        });
                     }
                 }
             }
@@ -139,7 +139,14 @@ export const webSocketServerSetUp = (redis_client, server) => {
             ws.close();
         });
         ws.on('close', async() => {
-            await saveChat('SAVE', userHash, ws.id)
+            const saving = await saveChat('SAVE', userHash, ws.id)
+            if(saving){
+                const remove_ws = wss_connections.get(visitorID)
+                const updated_remove_ws = remove_ws.filter((connection) => connection !== ws);
+                if(updated_remove_ws){
+                    console.log("removed and closed")
+                }
+            }
         });
     });
 }
