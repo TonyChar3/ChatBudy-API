@@ -153,7 +153,7 @@ const realTimeUpdated = async(hash) => {
 /**
  * Create a JWT with the new visitor ID's
  */
-const generateJWT = async(visitor_id, user_hash) => {
+const generateJWT = async(visitor_id, user_hash, login_user) => {
   try{
     if(visitor_id && !user_hash){
       const _id = visitor_id;
@@ -169,13 +169,15 @@ const generateJWT = async(visitor_id, user_hash) => {
       return {
         jwtToken: signedToken
       }
-    } else if(visitor_id && user_hash){
+    } else if(visitor_id && user_hash && login_user){
       const _id = visitor_id;
       const userHash = user_hash;
+      const log_in_user = login_user
 
       const payload = {
         id: _id,
         userHash: userHash,
+        logIN: log_in_user,
         iat: Math.floor(Date.now() / 1000),
         exp: Math.floor(Date.now() / 1000) + (48 * 60 * 60)
       };
@@ -233,4 +235,33 @@ const validUserAcess = async(hash) => {
   }
 }
 
-export { generateRandomID, uniqueUserHash,uniqueVisitorID, getVisitorBrowser, realTimeUpdated, generateJWT, decodeJWT, validUserAcess }
+/**
+ * Set the visitor email section
+ */
+const setVisitorEmail = async(user_hash, visitor_id, email) => {
+  try{
+    // find user visitor collection
+    const visitor_collection = await Visitor.findById(user_hash);
+    if(!visitor_collection){
+      throw new Error("Setting visitor email ERROR: Unable to find the visitor to set the email...")
+    }
+    // get the visitor object index in the user visitor array
+    const visitor_index = visitor_collection.visitor.findIndex(visitor => visitor._id.toString() === visitor_id.toString());
+    if(visitor_index === -1){
+      throw new Error("Setting visitor email ERROR: Unable to find the visitor index to set the email...")
+    } 
+    // set the new field
+    visitor_collection.visitor[visitor_index].email = email;
+    // save it
+    const save_updates = await visitor_collection.save()
+    if(save_updates){
+      return true
+    } else {
+      throw new Error('Setting visitor email ERROR: unable to save the updated visitor')
+    }
+  } catch(err){
+    console.log(err)
+  }
+}
+
+export { generateRandomID, uniqueUserHash,uniqueVisitorID, getVisitorBrowser, realTimeUpdated, generateJWT, decodeJWT, validUserAcess, setVisitorEmail }

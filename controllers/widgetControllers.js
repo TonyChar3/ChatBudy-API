@@ -1,5 +1,5 @@
 import asyncHandler from 'express-async-handler';
-import fs, { ReadStream } from 'fs';
+import fs from 'fs';
 import path from 'path';
 import Widget from '../models/widgetModels.js';
 import User from '../models/userModels.js';
@@ -13,8 +13,9 @@ const initializeWidget = asyncHandler( async(req,res,next) => {
     try{
         const { id } = req.params;
         const domainWidget = await Widget.findById(id);
+        const widgetAdmin = await User.findOne({ user_access: id })
 
-        if(!domainWidget){
+        if(!domainWidget || !widgetAdmin){
             res.status(404);
             throw new Error("Widget domain not found");
         } else {
@@ -27,7 +28,7 @@ const initializeWidget = asyncHandler( async(req,res,next) => {
             const readStream = fs.createReadStream(widgetPath);
             let widgetContent = '';
 
-            readStream.on('data', (chunk) => {
+            readStream.on('data', async(chunk) => {
                 widgetContent += chunk.toString().replace('__HASH__', id)
             });
 

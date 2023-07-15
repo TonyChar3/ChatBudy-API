@@ -1,7 +1,8 @@
 import asyncHandler from 'express-async-handler';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
-import { getVisitorBrowser, realTimeUpdated, generateJWT, generateRandomID } from '../utils/manageVisitors.js';
+import { getVisitorBrowser, realTimeUpdated, generateJWT, generateRandomID, decodeJWT } from '../utils/manageVisitors.js';
+import { sendNotification } from '../utils/manageChatRoom.js';
 import Visitor from '../models/visitorsModels.js';
 import Chatroom from '../models/chatRoomModels.js';
 import User from '../models/userModels.js';
@@ -60,7 +61,15 @@ const createVisitor = asyncHandler(async(req,res,next) => {
                 if(!get_update){
                     res.status(500);
                 }
+                // update SSE data
                 sendUpdateToUser(get_update.userID, get_update.array)
+                // notify the user
+                const notification_object ={
+                    sent_from: "Admin",
+                    title: "New visitor",
+                    content: `${uid} is visiting`
+                }
+                sendNotification("admin", access_id, uid, notification_object)
 
                 const generate_token = await generateJWT(uid)
                 if(!generate_token){
@@ -116,21 +125,5 @@ const deleteVisitor = asyncHandler( async(req,res,next) => {
     }
 });
 
-//@desc Route to update the specific visitor
-//@route PUT /visitor/update-visitor
-//@acces PRIVATE
-const updateVisitor = asyncHandler(async(req,res,next) => {
-    try{
-        // get the specific user ID
-        // find him
-        // update his profile
-        // save()
-        // send back success message
-    } catch(err){
-        res.status(500);
-        next(err)
-    }
-});
 
-
-export { visitorInfoFetch, createVisitor, deleteVisitor, updateVisitor }
+export { visitorInfoFetch, createVisitor, deleteVisitor }

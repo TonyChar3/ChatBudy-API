@@ -1,5 +1,23 @@
 import mongoose from 'mongoose';
 
+const visitorNotificationsSchema = mongoose.Schema({
+    sent_from: {
+        type: String,
+        required: true
+    },
+    title: {
+        type: String,
+        required: true
+    },
+    content: {
+        type: String,
+        required: true
+    }
+},
+{
+    timestamps: true
+});
+
 const visitorElementSchema = mongoose.Schema({
     _id: {
         type: String,
@@ -13,7 +31,8 @@ const visitorElementSchema = mongoose.Schema({
     },
     browser: {
         type: String
-    }
+    },
+    notifications: [visitorNotificationsSchema]
 },
 {
     timestamps: true

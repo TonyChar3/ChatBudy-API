@@ -43,14 +43,15 @@ const SSEconnection = asyncHandler(async(req,res,next) => {
 
             connections.set(connectedUser.id, res);
             fetchAllVisitor()
+            fetchAllNotification()
             
             res.on("error", (error) => {
                 console.log(error)
-                connections.delete(connectedUser);
+                connections.delete(connectedUser.id);
             })
                 
             res.on('close', () => {
-                connections.delete(connectedUser);
+                connections.delete(connectedUser.id);
             });
         }
     } catch(err){
@@ -64,9 +65,45 @@ const SSEconnection = asyncHandler(async(req,res,next) => {
  */
 const sendUpdateToUser = (user_id, data) => {
     const connection = connections.get(user_id);
-
+    const visitor_object = {
+        type: 'visitor',
+        data: data
+    }
     if(connection) {
-        connection.write(`data: ${JSON.stringify(data)}\n\n`)
+        connection.write(`data:${JSON.stringify(visitor_object)}\n\n`)
+    }
+}
+
+/**
+ * Function to send notifications updates to the front-end
+ */
+const sendNotificationUpdate = (user_id, data) => {
+    const connection = connections.get(user_id);
+    const notification_object = {
+        type: 'notification',
+        data: data
+    }
+    if(connection) {
+        connection.write(`data:${JSON.stringify(notification_object)}\n\n`)
+    }
+}
+
+/**
+ * Function to update the visitors info on the frontend
+ */
+const sendUpdatedInfo = async(user_hash, visitor_id, email) => {
+    const user = await User.findOne({ user_access: user_hash })
+    if(!user){
+        throw new Error("Send update info function ERROR: unable to find the user with the provided user hash")
+    }
+    const connection = connections.get(user._id);
+    const update_object = {
+        type: 'update_info',
+        id: visitor_id,
+        data: email
+    }
+    if(connection) {
+        connection.write(`data:${JSON.stringify(update_object)}\n\n`)
     }
 }
 
@@ -99,5 +136,55 @@ const fetchAllVisitor = async() => {
     }
 }
 
+/**
+ * Function to send the notifications array to the front-end
+ */
+const fetchAllNotification = async() => {
+    try{
+        if(connectedUser){
+            const decodedToken = await admin.auth().verifyIdToken(connectedUser.accessToken)
+            if(decodedToken){
+                const user = await User.findById(decodedToken.uid)
+                if(!user){
+                    throw new Error("Unable to find your visitor array...please reload and try again")
+                }
+                if(user.notification.length > 0) {
+                    sendNotificationUpdate(user._id, user.notification);
+                } else {
+                    sendNotificationUpdate(user._id, []);
+                }
+            }
+        }
+    } catch(err){
+        console.log(err);
+    }
+}
 
-export { SSEconnection, sendUpdateToUser, AuthSSEconnection }
+/**
+ * Function to send the Admin log in status to the widget
+ */
+const adminLogInStatus = async(admin_hash) => {
+    try{
+        const user_object = await User.findOne({ user_access: admin_hash })
+        if(!user_object){
+            throw new Error('Cannot find user...please try again')
+        }
+        const valid_auth_user = await admin.auth().getUser(user_object._id)
+        if(!valid_auth_user){
+            throw new Error('User not authenticated...FORBIDDEN')
+        } else if(valid_auth_user) {
+            const user_online = connections.get(user_object._id)
+            if(!user_online){
+                return false
+            } else {
+                return true
+            }
+        }
+
+    } catch(err){
+        console.log(err)
+    }
+}
+
+
+export { SSEconnection, sendUpdateToUser, AuthSSEconnection, adminLogInStatus, sendNotificationUpdate, sendUpdatedInfo }

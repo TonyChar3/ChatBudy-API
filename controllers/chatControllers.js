@@ -1,9 +1,7 @@
 import asyncHandler from "express-async-handler";
 import { decodeJWT, generateJWT } from '../utils/manageVisitors.js';
-import { verifyCache } from "../utils/manageChatRoom.js";
 import ChatRoom from '../models/chatRoomModels.js';
 import admin from 'firebase-admin';
-import { redis_client } from "../server.js";
 
 
 //@desc Route to create a new chat room with the visitor
@@ -25,13 +23,13 @@ const createChatRoom = asyncHandler(async(req,res,next) => {
             throw new Error("No chatroom found with the given user access ID")
         }
         // create a new chat for the array with the visitor
-        const newChat = {
+        const new_room = {
             visitor: decoded.id
         }
         // add it to the array
         const add_newroom = await user_chatroom.updateOne({
             $push: {
-                chat_rooms: newChat
+                chat_rooms: new_room
             }
         });
         if(add_newroom){
@@ -64,7 +62,7 @@ const AuthForWS = asyncHandler(async(req,res,next) => {
         const user_chatroom = await ChatRoom.findById(user_hash);
         if(decoded && user_chatroom){
             // -> create another JWT with both the hash and id from the jwt and return it
-            const ws_JWT = await generateJWT(decoded.id, user_hash);
+            const ws_JWT = await generateJWT(decoded.id, user_hash, decoded.id);
             if(ws_JWT){
                 const deco = await decodeJWT(ws_JWT.jwtToken, 'WS');
                 if(deco){
@@ -93,7 +91,7 @@ const UserAuthWS = asyncHandler(async(req,res,next) => {
         // check it using Firebase admin
         const verify_token = admin.auth().verifyIdToken(token)
         if(verify_token){
-            const ws_token = await generateJWT(visitor_id, user_hash)
+            const ws_token = await generateJWT(visitor_id, user_hash, user_hash)
             if(ws_token){
                 res.status(201).send({ wss_jwt: ws_token.jwtToken})
             } else {
@@ -107,21 +105,6 @@ const UserAuthWS = asyncHandler(async(req,res,next) => {
         console.log(err)
     }
 }); 
-
-//@desc Route to send new chat
-//@route POST /chat/send
-//@access PUBLIC
-const sendChat = asyncHandler(async(req,res,next) => {
-    try{
-        // get the right room
-        const { user_hash, visitor_id } = req.body
-        // find the room
-        // find the specific object and add push it inside the messages array
-    } catch(err){
-        res.status(500);
-        next(err)
-    }
-});
 
 //@desc Route to delete selected Chat
 //@route DELETE /chat/delete-chat
@@ -138,4 +121,4 @@ const deleteChat = asyncHandler(async(req,res,next) => {
 });
 
 
-export { createChatRoom, sendChat, deleteChat, AuthForWS, UserAuthWS }
+export { createChatRoom, deleteChat, AuthForWS, UserAuthWS }

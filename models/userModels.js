@@ -1,8 +1,17 @@
 import mongoose from 'mongoose';
 
 const notificationsItem = mongoose.Schema({
-    text: {
-        type: String
+    sent_from: {
+        type: String,
+        required: true
+    },
+    title: {
+        type: String,
+        required: true
+    },
+    content: {
+        type: String,
+        required: true
     }
 },
 {

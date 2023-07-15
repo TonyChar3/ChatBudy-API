@@ -1,4 +1,7 @@
+
+
 let socket;// variable for the WebSocket connection
+let sentIsTyping = false
 
 export const styles = `
     .widget__content * {
@@ -90,7 +93,13 @@ export const styles = `
     .status-circle__icon {
         margin-right: .4em;
         font-size: 0.65rem;
+        
+    }
+    .status__online{
         color: #1af033;
+    }
+    .status__offline{
+        color: #ff2929;
     }
     .widget-chatroom__header {
         position: relative;
@@ -149,12 +158,60 @@ export const styles = `
         background-attachment: fixed;
         transition: all 0.3s ease-in-out;
     }
+    .chatroom__email-form-container {
+        width: auto;
+        height: auto;
+    }
     .chatroom__chat {
         display: inline-block;
         max-width: 38%;
         height: auto;
         margin: 1.01em;
         border-radius: 0 0 10px 10px;
+    }
+    .chatroom__email-input-div{
+        display: inline-block;
+        max-width: 50%;
+        height: auto;
+        margin: 1.01em 1.01em 0 1.01em;
+        padding: .5em;
+        border: 2px solid #0c64f2; 
+        border-radius: 10px 10px 10px 0;
+    }
+    .chatroom__email-input {
+        width: 100%;
+        padding: .4em;
+        border-bottom: 1px solid #c9c8c5;
+        font-size: 0.90rem;
+        outline: none;
+    }
+    .set__input-error {
+        border-bottom: 2px solid red;
+    }
+    .chatroom__email-input:focus {
+        border-bottom: 1px solid #0c64f2;
+    }
+    .chatroom__submit-btn-div {
+        display: flex;
+        justify-content: space-between;
+        max-width: 50%;
+        height: auto;
+        margin: .3em 1.01em .5em 1.01em;
+        padding: .2em;
+    }
+    .chatroom__email-buttons {
+        padding: .4em;
+        border: 1px solid #0c64f2;
+        border-radius: 10px;
+        color: #0c64f2;
+        font-size: 0.95rem;
+        font-style: #0c64f2;
+    }
+    .chatroom__email-buttons:active {
+        border: 1px solid #c9c8c5;
+        color: #c9c8c5;
+        transform: scale(0.70);
+        transition: 0.2s all ease-in-out;
     }
     .chatroom__chat.left {
         background-color: #d6d6d6;
@@ -214,12 +271,30 @@ export const styles = `
         background-color: transparent;
         border-radius: 4px;
     }
+    #loading {
+        width: 100%;
+        height: 100%;
+        margin: 6em 0;
+    }
+    .spinner {
+        width: 60px;
+        height: 60px;
+        margin: 0 auto;
+        border: 3px solid rgba(157, 158, 157, 0.3);
+        border-top-color: #0c64f2;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
     @media (min-width: 1024px) {
         .widget__content ::-webkit-scrollbar-thumb {
             margin: .2em;
             background-color: #c9c8c5;
             border-radius: 4px;
         }
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
     }
 `;
 
@@ -346,6 +421,15 @@ export const openChat = async(widget_id) => {
 }
 
 /**
+ * Function to send the socket link to the frontend
+ */
+export const getSSElink = (widget_id) => {
+    if(widget_id && socket){
+        return socket;
+    }
+}
+
+/**
  * Close the Chat
  */
 export const stopChat = () => {
@@ -374,9 +458,45 @@ export const sendChat = (input) => {
             };
             // send it to the websocket server
             socket.send(JSON.stringify(new_chat));
+            input.value = ''
+            sentIsTyping = false
         } else if(!input.value || input.value === ''){
-            input.value === ''
+            input.value = ''
+            sentIsTyping = false
         }
+    }
+}
+
+/**
+ * To send the isTyping action
+ */
+export const EmitIsTyping = (input_value) => {
+    if(socket){
+        if(input_value !== '' && !sentIsTyping){
+            socket.send(JSON.stringify({ type: 'typing', status: true }))
+            sentIsTyping = true
+        } else if (input_value === ''){
+            sentIsTyping = false;
+        }
+    }
+}
+
+/**
+ * Set the visitor email address
+ */
+export const SetVisitorEmail = (email_value) => {
+    try{
+        if(email_value){
+            console.log(email_value)
+            // send the email to the WebSocket server
+            const set_visitor_email = {
+                type: "set-email",
+                visitor_email: email_value
+            }
+            socket.send(JSON.stringify(set_visitor_email))
+        }
+    } catch(err){
+        console.log(err)
     }
 }
 

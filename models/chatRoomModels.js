@@ -12,6 +12,9 @@ const chatMessageSchema = mongoose.Schema({
     sender_type: {
         type: String,
         required: true
+    },
+    chat_seen: {
+        type: String
     }
 },
 {
