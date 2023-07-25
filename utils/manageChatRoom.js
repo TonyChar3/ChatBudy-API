@@ -2,6 +2,7 @@ import Chatroom from '../models/chatRoomModels.js';
 import Visitors from '../models/visitorsModels.js';
 import User from '../models/userModels.js';
 import dotenv from 'dotenv';
+import { sendNotificationUpdate } from '../controllers/sseControllers.js';
 
 dotenv.config();
 
@@ -113,8 +114,6 @@ const verifyCache = async(verify_mode, client, visitor_id, chat_obj) => {
                 if(visitor_cache){
                     // if found in the cache just return
                     return visitor_cache
-                    
-                    // return visitor_cache
                 } else if(!visitor_cache && chat_obj) {
                     // if not found cache it and return
                     await client.set(visitor_id, JSON.stringify(chat_obj), "EX", 3600);
@@ -128,10 +127,10 @@ const verifyCache = async(verify_mode, client, visitor_id, chat_obj) => {
                     return cached_room
                 } 
                 break;
+
             default:
                 break;
         }
-
     } catch(err){
         console.log(err)
     }
@@ -156,10 +155,12 @@ const sendNotification = async(client_type, user_hash, client_id, notif_object) 
                 }
                 // upodate his notification array
                 const visitor = visitor_collection.visitor[visitor_index]
+                const visitor_notif_array = visitor.notifications
                 visitor.notifications.push(notif_object)
                 // save it
                 const add_notification = await visitor_collection.save()
                 if(add_notification){
+                    visitor_notif_array.push(notif_object)
                     break;
                 } else {
                     throw new Error("Unable to notify the visitor...please try again")
@@ -170,12 +171,19 @@ const sendNotification = async(client_type, user_hash, client_id, notif_object) 
                 if(!user_object){
                     throw new Error('Unable to find the user to notify... please try again')
                 }
-                const update_array = await user_object.updateOne({
+                const admin_notif_array = user_object.notification
+                const update_array = await user_object.updateOne(  {
                     $push: {
-                        notification: notif_object
+                      notification: {
+                        $each: [notif_object],
+                        $position: 0
+                      }
                     }
                 });
                 if(update_array){
+                    const updated_array = await User.findOne({ user_access: user_hash })
+                    admin_notif_array.unshift(notif_object)
+                    sendNotificationUpdate(user_object._id, updated_array.notification)
                     break;
                 } else {
                     throw new Error('Unable to notify... try again')

@@ -1,7 +1,7 @@
 import asyncHandler from 'express-async-handler';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
-import { getVisitorBrowser, realTimeUpdated, generateJWT, generateRandomID, decodeJWT } from '../utils/manageVisitors.js';
+import { getVisitorBrowser, generateJWT, generateRandomID } from '../utils/manageVisitors.js';
 import { sendNotification } from '../utils/manageChatRoom.js';
 import Visitor from '../models/visitorsModels.js';
 import Chatroom from '../models/chatRoomModels.js';
@@ -16,15 +16,13 @@ dotenv.config();
 const visitorInfoFetch = asyncHandler( async(req,res,next) => {
     try {
         const api_key = process.env.GEO_KEY
-
         const response = await fetch(`https://api.geoapify.com/v1/ipinfo?&apiKey=${api_key}`)
         if(response) {
             const data =  await response.json()
             if(data) {
                 res.json({ info: data })
             }
-        }
-        
+        } 
     } catch(err) {
         console.log(err)
     }
@@ -43,7 +41,7 @@ const createVisitor = asyncHandler(async(req,res,next) => {
         const visitor_browser = await getVisitorBrowser(browser);
        
         if( visitor && visitor_browser && uid) {
-            
+            const visitor_array = visitor.visitor
             const newVisitor = {
                 _id: uid,
                 country: isoCode,
@@ -57,12 +55,14 @@ const createVisitor = asyncHandler(async(req,res,next) => {
             });
 
             if(add_visitor){
-                const get_update = await realTimeUpdated(access_id);
-                if(!get_update){
-                    res.status(500);
+                // get the user uid
+                const user = await User.findOne({ user_access: access_id })
+                if(!user){
+                    throw new Error("Create visitor ERROR: No user found for the visitor...")
                 }
+                visitor_array.push(newVisitor)
                 // update SSE data
-                sendUpdateToUser(get_update.userID, get_update.array)
+                sendUpdateToUser(user._id, visitor_array)
                 // notify the user
                 const notification_object ={
                     sent_from: "Admin",

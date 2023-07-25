@@ -125,32 +125,6 @@ const getVisitorBrowser = async(browser_info) => {
 }
 
 /**
- * Update in real-time the visitor array
- */
-const realTimeUpdated = async(hash) => {
-  try{
-    // get the user uid
-    const user = await User.findOne({ user_access: hash })
-    if(!user){
-      throw new Error("User not found for the real-time update...please try again or contact support")
-    }
-
-    // get the new array
-    const updatedVisitor = await Visitor.findById(hash);
-    const updatedVisitorList = updatedVisitor.visitor;
-
-    // Will return the updated array and the user.uid
-    const updated_info ={
-      userID: user._id,
-      array: updatedVisitorList
-    }
-    return updated_info
-  } catch(err){
-    console.log(err)
-  }
-}
-
-/**
  * Create a JWT with the new visitor ID's
  */
 const generateJWT = async(visitor_id, user_hash, login_user) => {
@@ -264,4 +238,4 @@ const setVisitorEmail = async(user_hash, visitor_id, email) => {
   }
 }
 
-export { generateRandomID, uniqueUserHash,uniqueVisitorID, getVisitorBrowser, realTimeUpdated, generateJWT, decodeJWT, validUserAcess, setVisitorEmail }
+export { generateRandomID, uniqueUserHash,uniqueVisitorID, getVisitorBrowser, generateJWT, decodeJWT, validUserAcess, setVisitorEmail }

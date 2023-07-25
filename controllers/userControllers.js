@@ -5,6 +5,7 @@ import admin from 'firebase-admin';
 import Visitors from '../models/visitorsModels.js';
 import ChatRoom from '../models/chatRoomModels.js';
 import { uniqueUserHash } from '../utils/manageVisitors.js';
+import { sendNotificationUpdate } from '../controllers/sseControllers.js';
 
 //@desc Register a new User
 //@route POST /user/register
@@ -94,17 +95,70 @@ const currentUser = asyncHandler(async(req,res,next) => {
     }
 });
 
-//@desc Connect the user to a chatroom
-//@route POST /user/connect-chat
+//@desc CLEAR the user notification array
+//@route DELETE /user/clear-notification
 //@access PRIVATE
-const connectChatUserr = asyncHandler(async(req,res,next) => {
+const clearNotifications = asyncHandler(async(req,res,next) => {
     try{
-        // receive the visitor id and the user hash
-        // generate a JWT for auth into the websocket connection
-        // verify it and send back the jwt to the frontend
+        //get the user token
+        const token = req.headers.authorization.split(' ')[1]
+        //validate it
+        const decodedToken = await admin.auth().verifyIdToken(token)
+        if(!decodedToken){
+            res.status(403);
+        }
+        const user = await User.findById(decodedToken.uid)
+        if(!user){
+            res.status(404).send({message: "Clearing notification: User not found in DB"});
+        } else {
+            // access his notification array and clear it
+            user.notification = [];
+            await user.save();
+            sendNotificationUpdate(user._id, [])
+            // return a positive response back from the server
+            res.status(201).send({ message: 'Notifications cleared' });
+        }
     } catch(err){
         console.log(err)
+        next(err)
     }
-}); 
+});
 
-export { registerUser, updateProfile, currentUser }
+//@desc Clean up the seen notifications by the user
+//@route DELETE /user/clean-up-notification
+//@access PRIVATE
+const cleanUpNotifications = asyncHandler(async(req,res,next) => {
+    try{
+        // get the sent notification array
+        const { notif_array } = req.body
+        // get the token of the user
+        const token = req.headers.authorization.split(" ")[1]
+        // validate and decode the token
+        const decodedToken = await admin.auth().verifyIdToken(token)
+        if(!decodedToken){
+            res.status(403);
+        }
+        // find the user
+        const user = await User.findById(decodedToken.uid)
+        if(!user){
+            res.status(404).send({ message: "User not found in the DB for notification clean up"})
+        }
+        // filter the user notification array with the seen notif array
+        const updatedNotifications = user.notification.filter(notif => !notif_array.includes(notif._id.toString()));
+        // save it
+        if(Array.isArray(updatedNotifications)){
+            user.notification = updatedNotifications
+            await user.save();
+            sendNotificationUpdate(user._id, updatedNotifications)
+            // return a positive response back from the server
+            res.status(201).send({ message: 'Notifications cleaned up' });
+        } else {
+            res.status(500).send({ message: "Error cleaning up the seen notifications"})
+        }
+    } catch(err){
+        console.log(err)
+        next(err)
+    }
+});
+
+export { registerUser, updateProfile, currentUser, clearNotifications, cleanUpNotifications }

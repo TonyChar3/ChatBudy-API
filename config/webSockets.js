@@ -1,4 +1,4 @@
-import { WebSocketServer, WebSocket } from 'ws';
+import { WebSocketServer } from 'ws';
 import { decodeJWT, setVisitorEmail } from '../utils/manageVisitors.js';
 import { saveChat, verifyCache, sendNotification, cacheSentChat, askEmailForm } from '../utils/manageChatRoom.js';
 import { sendUpdatedInfo } from '../controllers/sseControllers.js';
@@ -129,7 +129,6 @@ export const webSocketServerSetUp = (redis_client, server) => {
                             type: '...',
                             status: received_msg.status
                         }
-        
                         // Broadcast the message to all connected clients except the sender
                         user_ws_connected.forEach(client => {
                             if (client.ws !== ws) {
@@ -145,9 +144,14 @@ export const webSocketServerSetUp = (redis_client, server) => {
                         console.log("Will be set",sanitized_value)
                         const set_email = await setVisitorEmail(userHash, visitorID, sanitized_value)
                         if(set_email){
-                            console.log('email set')
                             ws.send(JSON.stringify(ws_chatroom.messages))
                             // notify the admin
+                            notification_obj = {
+                                sent_from: 'Admin',
+                                title: `${visitorID} has set a new email`,
+                                content: `the new email: ${sanitized_value}`
+                            }
+                            sendNotification('admin', userHash, visitorID, notification_obj)
                         }
                     }
                     break;
@@ -186,15 +190,16 @@ export const webSocketServerSetUp = (redis_client, server) => {
                                     case visitorID:
                                         notification_obj = {
                                             sent_from: visitorID,
-                                            title: 'New chat...',
-                                            content: received_msg.content
+                                            title: `${visitorID} has sent you a new chat`,
+                                            content: received_msg.content,
+                                            action: visitorID
                                         }
                                         sendNotification('admin', userHash, visitorID, notification_obj)
                                         break;
                                     case userHash:
                                         notification_obj = {
                                             sent_from: 'Agent',
-                                            title: 'New chat...',
+                                            title: `New chat from support`,
                                             content: received_msg.content
                                         }
                                         sendNotification('visitor', userHash, visitorID, notification_obj)
