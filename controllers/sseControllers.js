@@ -91,19 +91,18 @@ const sendNotificationUpdate = (user_id, data) => {
 /**
  * Function to update the visitors info on the frontend
  */
-const sendUpdatedInfo = async(user_hash, visitor_id, email) => {
+const sendUpdatedInfo = async(user_hash, data) => {
     const user = await User.findOne({ user_access: user_hash })
     if(!user){
         throw new Error("Send update info function ERROR: unable to find the user with the provided user hash")
     }
     const connection = connections.get(user._id);
-    const update_object = {
-        type: 'update_info',
-        id: visitor_id,
-        data: email
+    const updatedInfo_object = {
+        type: 'visitor',
+        data: data
     }
     if(connection) {
-        connection.write(`data:${JSON.stringify(update_object)}\n\n`)
+        connection.write(`data:${JSON.stringify(updatedInfo_object)}\n\n`)
     }
 }
 

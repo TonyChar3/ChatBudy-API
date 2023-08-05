@@ -1,7 +1,6 @@
 import { WebSocketServer } from 'ws';
 import { decodeJWT, setVisitorEmail } from '../utils/manageVisitors.js';
 import { saveChat, verifyCache, sendNotification, cacheSentChat, askEmailForm } from '../utils/manageChatRoom.js';
-import { sendUpdatedInfo } from '../controllers/sseControllers.js';
 import Chatroom from '../models/chatRoomModels.js';
 import dotenv from 'dotenv';
 import { adminLogInStatus } from '../controllers/sseControllers.js';
@@ -106,6 +105,7 @@ export const webSocketServerSetUp = (redis_client, server) => {
             const connect_array = wss_connections.get(visitorID)
             connect_array.push(connected_user)
         }
+
         if(user_type_login === visitorID){
             // check if the visitor email is set
             if(!ask_email){
@@ -117,6 +117,7 @@ export const webSocketServerSetUp = (redis_client, server) => {
         } else if (user_type_login === userHash){
             ws.send(JSON.stringify(ws_chatroom.messages))
         }
+
         ws.on('message', async(msg, isBinary) => {
             const received_msg = JSON.parse(msg)
             user_ws_connected = wss_connections.get(visitorID)
@@ -141,7 +142,6 @@ export const webSocketServerSetUp = (redis_client, server) => {
                 case 'set-email':
                     const sanitized_value = received_msg.visitor_email.replace(/[^\w\s@.\-]/gi, '');
                     if(sanitized_value){
-                        console.log("Will be set",sanitized_value)
                         const set_email = await setVisitorEmail(userHash, visitorID, sanitized_value)
                         if(set_email){
                             ws.send(JSON.stringify(ws_chatroom.messages))

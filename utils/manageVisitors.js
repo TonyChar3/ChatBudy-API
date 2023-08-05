@@ -5,6 +5,7 @@ import jsonwebtoken from 'jsonwebtoken';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { sendUpdatedInfo } from '../controllers/sseControllers.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -229,6 +230,7 @@ const setVisitorEmail = async(user_hash, visitor_id, email) => {
     // save it
     const save_updates = await visitor_collection.save()
     if(save_updates){
+      sendUpdatedInfo(user_hash, visitor_collection.visitor)
       return true
     } else {
       throw new Error('Setting visitor email ERROR: unable to save the updated visitor')

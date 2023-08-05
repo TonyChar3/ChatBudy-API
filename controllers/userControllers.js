@@ -60,11 +60,80 @@ const registerUser = asyncHandler(async(req,res,next) => {
     }
 });
 
-//@desc Update the user profile
+//@desc Update the user profile Username or Email
 //@route PUT /user/update-profile
 //@access PRIVATE
 const updateProfile = asyncHandler(async(req,res,next) => {
-    res.json({ message: "Update user profile..."})
+    try{
+        const { new_name, new_email } = req.body
+        // get the token of the user
+        const token = req.headers.authorization.split(" ")[1]
+        // validate and decode the token
+        const decodedToken = await admin.auth().verifyIdToken(token)
+        if(!decodedToken){
+            res.status(403);
+        }
+        // find the user with his email
+        const user = await User.findById(decodedToken.uid);
+        // To gather every updates sent back
+        const updateProfile = {};
+        // make sure it is found
+        if(!user){
+            res.status(500).send({ message: 'Unable to find User to update the profile' })
+        }
+
+        if(new_name){ 
+            // if a username is sent back
+            if(user.username !== new_name){
+                // set it in the updateprofile object
+                updateProfile.username = new_name;
+            }
+        } 
+        if(new_email){
+            // if a new email is sent back
+            if(user.email !== new_email){
+                // set it int the updateprofile object
+                updateProfile.email = new_email;
+            }
+        }
+
+        if(Object.keys(updateProfile).length === 0){
+            res.status(200).json({ message: "Nothing to update"});
+        } else {
+            // update what was updated
+            const update = await User.findByIdAndUpdate(
+                {_id: decodedToken.uid},
+                {
+                    $set: updateProfile
+                },
+                {new:true}
+            );
+            console.log(updateProfile)
+            if(updateProfile.username && updateProfile.email){
+                admin.auth().updateUser(decodedToken.uid,{
+                    email: updateProfile.email,
+                    displayName: updateProfile.username
+                });
+            } else if(updateProfile.username){
+                admin.auth().updateUser(decodedToken.uid,{
+                    displayName: updateProfile.username
+                });
+            } else if(updateProfile.email){
+                admin.auth().updateUser(decodedToken.uid,{
+                    email: updateProfile.email
+                });
+            }
+            if(update){
+                res.status(201).json({ message: "User Profile Updated" });
+            } else {
+                res.status(500);
+                throw new Error("Unable to update the profile using the info provided");
+            }
+        }
+    } catch(err){
+        console.log(err)
+        next(err)
+    }
 });
 
 //@desc Get the current logged in user data
@@ -125,7 +194,7 @@ const clearNotifications = asyncHandler(async(req,res,next) => {
 });
 
 //@desc Clean up the seen notifications by the user
-//@route DELETE /user/clean-up-notification
+//@route DELETE /user/clean-up-notification        
 //@access PRIVATE
 const cleanUpNotifications = asyncHandler(async(req,res,next) => {
     try{
