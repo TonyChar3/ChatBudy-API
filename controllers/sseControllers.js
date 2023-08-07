@@ -48,7 +48,7 @@ const SSEconnection = asyncHandler(async(req,res,next) => {
             res.on("error", (error) => {
                 console.log(error)
                 connections.delete(connectedUser.id);
-            })
+            });
                 
             res.on('close', () => {
                 connections.delete(connectedUser.id);
