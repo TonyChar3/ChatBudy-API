@@ -14,16 +14,26 @@ const registerUser = asyncHandler(async(req,res,next) => {
     try{
         const token = req.headers.authorization.split(' ')[1]
         const { web_url, username } = req.body
+        // ^https:\/\/(?:www\.)?[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}[^ ]*$ regex to verify the url
+        const url_regex = /^https:\/\/(?:www\.)?[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}[^ ]*$/
+        const username_regex = /^[a-zA-Z0-9]+([\s._][a-zA-Z0-9]+)?$/
 
         const decodedToken = await admin.auth().verifyIdToken(token)
-
         if(decodedToken){
-            
             // get the user data
             const data = await admin.auth().getUser(decodedToken.user_id)
             // generate a unique user hash
             const u_hash = await uniqueUserHash();
-            if(data && u_hash){
+            // sanitize the url and the username with regex
+            if(!url_regex.test(web_url)){
+                res.status(500)
+                throw new Error('Invalid Website Url')
+            }
+            if(!username_regex.test(username)){
+                res.status(500)
+                throw new Error('Invalid Username')
+            }
+            if(data && u_hash && username_regex.test(username) && url_regex.test(web_url)){
                 //create the user and insert it in the DB
                 const user = await User.create({
                     _id: data.uid,
@@ -31,23 +41,19 @@ const registerUser = asyncHandler(async(req,res,next) => {
                     username: username,
                     email: data.email
                 });
-
                 // create the user widget
                 const widget = await Widget.create({
                     _id: u_hash,
                     domain: web_url
                 });
-
                 // create the user visitors array in the Visitors collection
                 const visitors = await Visitors.create({
                     _id: u_hash
                 });
-
                 // create the chatroom collection of the user
                 const chatroom = await ChatRoom.create({
                     _id: u_hash
                 });
-
                 if(user && widget && visitors && chatroom){
                     res.status(200).json({ message: "Welcome to the Salezy App"})
                 } else {
@@ -230,4 +236,49 @@ const cleanUpNotifications = asyncHandler(async(req,res,next) => {
     }
 });
 
-export { registerUser, updateProfile, currentUser, clearNotifications, cleanUpNotifications }
+//@desc Get a CSV file of the user visitor list
+//@route GET /user/download-visitor-csv
+//@acces PRIVATE
+const getVisitorListCSV = asyncHandler(async(req,res,next) => {
+    try{
+        // get the verification firebase token
+        const token = req.headers.authorization.split(" ")[1]
+        // validate and decode the token
+        const decodedToken = await admin.auth().verifyIdToken(token)
+        // verify it
+        if(!decodedToken){
+            res.status(403);
+        }
+        // use the UID to find the user
+        const current_user = await User.findById(decodedToken.uid)
+        if(!current_user){
+            res.status(404).send({ message: "Current User info not found to create a CSV file."})
+        }
+        // use the User access hash to get the visitor list from the visitor collection
+        const visitors = await Visitors.findById(current_user.user_access)
+        if(!visitors){
+            res.status(404).send({ message: 'Unable to find the current user visitor collection to make a CSV file.'})
+        } else {
+            // define the CSV writer
+            const csvWriter = createCsvWriter({
+                path: 'visitors.csv',
+                header: [
+                    {id: 'email', title: 'EMAIL'},
+                    {id: 'country', title: 'COUNTRY'}
+                ]
+            });
+            // write to a temporary CSV file
+            const writer_csv = await csvWriter.writeRecords(visitors.visitor)
+            // return it as download
+            if(writer_csv){
+                res.download('visitor.csv')
+            } else if (!writer_csv){
+                res.status(500)
+            }
+        }
+    } catch(err){
+        next(err)
+    }
+})
+
+export { registerUser, updateProfile, currentUser, clearNotifications, cleanUpNotifications, getVisitorListCSV }

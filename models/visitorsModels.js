@@ -38,6 +38,8 @@ const visitorElementSchema = mongoose.Schema({
     timestamps: true
 });
 
+// const closedVisitorElementSchema = mongoose.Schema
+
 const visitorSchema = mongoose.Schema({
     _id: {
         type: String,

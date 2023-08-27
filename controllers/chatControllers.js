@@ -102,7 +102,7 @@ const UserAuthWS = asyncHandler(async(req,res,next) => {
             res.status(403);
         }
     } catch(err){
-        console.log(err)
+        next(err)
     }
 }); 
 

@@ -10,23 +10,21 @@ let connectedUser;
 const AuthSSEconnection = asyncHandler(async(req,res,next) => {
     try{
         const token = req.headers.authorization.split(' ')[1];
-
         const decodeToken = await admin.auth().verifyIdToken(token);
-    
         if(decodeToken) {
             const userID = decodeToken.uid
             connectedUser = {
                 id: userID,
                 accessToken: token
             }
-            
             res.status(201).json({ message: "SSE connection granted"})
+        } else if (!decodeToken) {
+            next(err)
         }
     } catch(err){
-        console.log(err)
         next(err)
     }
-})
+});
 
 //@desc Route to initiate the SSE connection
 //@route GET /sse
@@ -42,8 +40,8 @@ const SSEconnection = asyncHandler(async(req,res,next) => {
             res.write('SSE connection started\n\n');
 
             connections.set(connectedUser.id, res);
-            fetchAllVisitor()
-            fetchAllNotification()
+            fetchAllVisitor();
+            fetchAllNotification();
             
             res.on("error", (error) => {
                 console.log(error)

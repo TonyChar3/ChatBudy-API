@@ -10,7 +10,7 @@ const errorHandler = (err, req, res, next) => {
 
     switch (statusCode) {
         case Constant.VALIDATION_ERROR :
-            res.json({
+            res.status(statusCode || 500).json({
                 title: "Validation failed",
                 message: err.message,
                 stackTrace: err.stack
@@ -18,7 +18,7 @@ const errorHandler = (err, req, res, next) => {
             break;
 
         case Constant.NOT_FOUND :
-            res.json({
+            res.status(statusCode || 500).json({
                 title: "Not found",
                 message: err.message,
                 stackTrace: err.stack
@@ -26,7 +26,7 @@ const errorHandler = (err, req, res, next) => {
             break;
 
         case Constant.UNAUTHORIZED :
-            res.json({
+            res.status(statusCode || 500).json({
                 title: "Unauthorized",
                 message: err.message,
                 stackTrace: err.stack
@@ -34,7 +34,7 @@ const errorHandler = (err, req, res, next) => {
             break;
 
         case Constant.FORBIDDEN :
-            res.json({
+            res.status(statusCode || 500).json({
                 title: "Forbidden",
                 message: err.message,
                 stackTrace: err.stack
@@ -42,15 +42,13 @@ const errorHandler = (err, req, res, next) => {
             break;
 
         case Constant.SERVER_ERROR :
-            res.json({
+            res.status(statusCode || 500).json({
                 title: "Server error",
                 message: err.message,
                 stackTrace: err.stack
             });
             break;
-
         default:
-            console.log('No error');
             break;
     }
 }

@@ -115,6 +115,7 @@ const verifyCache = async(verify_mode, client, visitor_id, chat_obj) => {
                     // if found in the cache just return
                     return visitor_cache
                 } else if(!visitor_cache && chat_obj) {
+                    client.select(0);
                     // if not found cache it and return
                     await client.set(visitor_id, JSON.stringify(chat_obj), "EX", 3600);
                     return

@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { sendUpdatedInfo } from '../controllers/sseControllers.js';
+import { ok } from 'assert';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -240,4 +241,34 @@ const setVisitorEmail = async(user_hash, visitor_id, email) => {
   }
 }
 
-export { generateRandomID, uniqueUserHash,uniqueVisitorID, getVisitorBrowser, generateJWT, decodeJWT, validUserAcess, setVisitorEmail }
+/**
+ * Check the request limit objects in the redis cache
+ */
+const checkRequestCache = async(redis_client, obj_email) => {
+  try{
+    const cached_object = await redis_client.get(obj_email);
+    if(cached_object){
+      let count = JSON.parse(cached_object)
+      if(count === 3){
+        const block_request = await redis_client.expire(obj_email, 10);
+        if(block_request){
+          return false
+        }
+      } else if (count <= 3){
+        const increment_count = count += 1
+        const new_count = await redis_client.set(obj_email, JSON.stringify(increment_count), "EX", 86400);
+        if(new_count){
+          return true
+        }
+      }
+    } else if (!cached_object){
+      // set the new obj in the db 1
+      await redis_client.set(obj_email, JSON.stringify(1), "EX", 86400);
+      return true
+    }
+  } catch(err){
+    console.log(err)
+  }
+}
+
+export { generateRandomID, uniqueUserHash,uniqueVisitorID, getVisitorBrowser, generateJWT, decodeJWT, validUserAcess, setVisitorEmail, checkRequestCache }
