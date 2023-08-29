@@ -1,6 +1,5 @@
 
-
-let socket;// variable for the WebSocket connection
+ let socket;// variable for the WebSocket connection
 let sentIsTyping = false
 
 export const styles = `
@@ -251,6 +250,13 @@ export const styles = `
         border: none;
         outline: none;
     }
+    .closed__convo_msg-wrapper{
+        height: 100%;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
     .chat__footer {
         width: 100%;
         padding: .4em .5em;
@@ -303,14 +309,13 @@ export const styles = `
 */
 export const LoadUpsequence = async(widget_id) => {
     try{
-        if(!sessionStorage.getItem('widgetLoaded')){
+        if(!sessionStorage.getItem('widgetLoaded') && !sessionStorage.getItem('convoClosed')){
             const response = await fetch(`http://localhost:8080/visitor/visitor-info`,{
                 method: 'get',
                 headers: {
                     'Content-Type': 'application/json'
                 }
             });
-  
             if(response){
                 const data = await response.json();
                 if(data){
@@ -366,7 +371,6 @@ export const initiateChat = async(widget_id) => {
         u_hash: widget_id
       }
       const token = getCookie('visitor_jwt');
-
       if(token){
         const start_chat = await fetch('http://localhost:8080/chat/new-room',{
             method: 'post',
@@ -379,6 +383,8 @@ export const initiateChat = async(widget_id) => {
 
         if(start_chat) {
             return true
+        } else if (!start_chat) {
+            console.log('No chatrooms found...reset everything')
         }
       }
 
@@ -394,26 +400,35 @@ export const initiateChat = async(widget_id) => {
 export const openChat = async(widget_id) => {
     try{
         if(widget_id){
-            // will send the user_hash and the httpOnly cookie jwt 
-            //TODO: credentials: 'include' once in production to send the httpOnly cookie
-            const token = getCookie('visitor_jwt');
-            const ws_auth_fetch = await fetch('http://localhost:8080/chat/auth-ws',{
-                method: 'post',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer '+ token
-                },
-                body: JSON.stringify({ user_hash: widget_id })
-            });
-            if(ws_auth_fetch){
-                // the fetch request will return the jwt with the hash and jwt inside
-                const data = await ws_auth_fetch.json();
-                if(data){
-                    // the WS connection will be made with the same jwt inside the params
-                    socket = new WebSocket(`ws://localhost:8080?id=${data.wss_connection}`);
-                    return socket
+            if(!sessionStorage.getItem('convoClosed') && sessionStorage.getItem('widgetLoaded')){
+                // will send the user_hash and the httpOnly cookie jwt 
+                //TODO: credentials: 'include' once in production to send the httpOnly cookie
+                const token = getCookie('visitor_jwt');
+                const ws_auth_fetch = await fetch('http://localhost:8080/chat/auth-ws',{
+                    method: 'post',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer '+ token
+                    },
+                    body: JSON.stringify({ user_hash: widget_id })
+                });
+                if(ws_auth_fetch){
+                    // the fetch request will return the jwt with the hash and jwt inside
+                    const data = await ws_auth_fetch.json();
+                    if(data.visitor_not_found){
+                        // Remove widgetLoaded from session storage
+                        sessionStorage.removeItem('widgetLoaded');
+                        // Remove visitor_jwt cookie
+                        document.cookie = 'visitor_jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                        // Open the closed conversation message
+                        sessionStorage.setItem('convoClosed', true);
+                    } else if(data.wss_connection){
+                        // the WS connection will be made with the same jwt inside the params
+                        socket = new WebSocket(`ws://localhost:8080?id=${data.wss_connection}`);
+                        return socket
+                    } 
                 }
-            }
+            } 
         }
     } catch(err){
         console.log(err)

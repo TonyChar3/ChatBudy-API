@@ -6,6 +6,7 @@ import Visitors from '../models/visitorsModels.js';
 import ChatRoom from '../models/chatRoomModels.js';
 import { uniqueUserHash } from '../utils/manageVisitors.js';
 import { sendNotificationUpdate } from '../controllers/sseControllers.js';
+import { Parser } from 'json2csv';
 
 //@desc Register a new User
 //@route POST /user/register
@@ -14,8 +15,8 @@ const registerUser = asyncHandler(async(req,res,next) => {
     try{
         const token = req.headers.authorization.split(' ')[1]
         const { web_url, username } = req.body
-        // ^https:\/\/(?:www\.)?[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}[^ ]*$ regex to verify the url
-        const url_regex = /^https:\/\/(?:www\.)?[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}[^ ]*$/
+        // TODO: Remove comment for production
+        // const url_regex = /^https:\/\/(?:www\.)?[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}[^ ]*$/
         const username_regex = /^[a-zA-Z0-9]+([\s._][a-zA-Z0-9]+)?$/
 
         const decodedToken = await admin.auth().verifyIdToken(token)
@@ -24,16 +25,19 @@ const registerUser = asyncHandler(async(req,res,next) => {
             const data = await admin.auth().getUser(decodedToken.user_id)
             // generate a unique user hash
             const u_hash = await uniqueUserHash();
+            // TODO: Remove comment for production
             // sanitize the url and the username with regex
-            if(!url_regex.test(web_url)){
-                res.status(500)
-                throw new Error('Invalid Website Url')
-            }
+            // if(!url_regex.test(web_url)){
+            //     res.status(500)
+            //     throw new Error('Invalid Website Url')
+            // }
             if(!username_regex.test(username)){
                 res.status(500)
                 throw new Error('Invalid Username')
             }
-            if(data && u_hash && username_regex.test(username) && url_regex.test(web_url)){
+            // TODO: Add into the if condition for production
+            //  && url_regex.test(web_url)
+            if(data && u_hash && username_regex.test(username)){
                 //create the user and insert it in the DB
                 const user = await User.create({
                     _id: data.uid,
@@ -87,7 +91,6 @@ const updateProfile = asyncHandler(async(req,res,next) => {
         if(!user){
             res.status(500).send({ message: 'Unable to find User to update the profile' })
         }
-
         if(new_name){ 
             // if a username is sent back
             if(user.username !== new_name){
@@ -98,11 +101,17 @@ const updateProfile = asyncHandler(async(req,res,next) => {
         if(new_email){
             // if a new email is sent back
             if(user.email !== new_email){
+                // set the emailVerified back to false
+                admin.auth().updateUser(decodedToken.uid,{
+                    emailVerified: false
+                })
+                .catch((err) => {
+                    next(err)
+                })
                 // set it int the updateprofile object
                 updateProfile.email = new_email;
             }
         }
-
         if(Object.keys(updateProfile).length === 0){
             res.status(200).json({ message: "Nothing to update"});
         } else {
@@ -114,7 +123,6 @@ const updateProfile = asyncHandler(async(req,res,next) => {
                 },
                 {new:true}
             );
-            console.log(updateProfile)
             if(updateProfile.username && updateProfile.email){
                 admin.auth().updateUser(decodedToken.uid,{
                     email: updateProfile.email,
@@ -137,7 +145,6 @@ const updateProfile = asyncHandler(async(req,res,next) => {
             }
         }
     } catch(err){
-        console.log(err)
         next(err)
     }
 });
@@ -259,20 +266,59 @@ const getVisitorListCSV = asyncHandler(async(req,res,next) => {
         if(!visitors){
             res.status(404).send({ message: 'Unable to find the current user visitor collection to make a CSV file.'})
         } else {
-            // define the CSV writer
-            const csvWriter = createCsvWriter({
-                path: 'visitors.csv',
-                header: [
-                    {id: 'email', title: 'EMAIL'},
-                    {id: 'country', title: 'COUNTRY'}
-                ]
-            });
-            // write to a temporary CSV file
-            const writer_csv = await csvWriter.writeRecords(visitors.visitor)
+            // defines the CSV fields
+            const fields = ['email', 'country'];
+            // Convert 
+            const json2csvParser = new Parser({ fields });
+            const csv = json2csvParser.parse(visitors.visitor)
             // return it as download
-            if(writer_csv){
-                res.download('visitor.csv')
-            } else if (!writer_csv){
+            if(csv){
+                res.header('Content-Type', 'text/csv');
+                res.attachment('visitors.csv');
+                res.send(csv);
+            } else {
+                res.status(500)
+            }
+        }
+    } catch(err){
+        next(err)
+    }
+});
+
+//@desc Get a CSV file of the closed clients list
+//@route GET /user/closed-clients-csv
+//@acces PRIVATE
+const getClosedClientsListCSV = asyncHandler(async(req,res,next) => {
+    try{
+        // get the verification firebase token
+        const token = req.headers.authorization.split(" ")[1]
+        // validate and decode the token
+        const decodedToken = await admin.auth().verifyIdToken(token)
+        // verify it
+        if(!decodedToken){
+            res.status(403);
+        }
+        // use the UID to find the user
+        const current_user = await User.findById(decodedToken.uid)
+        if(!current_user){
+            res.status(404).send({ message: "Current User info not found to create a CSV file."})
+        }
+        // use the User access hash to get the visitor list from the visitor collection
+        const visitor_collection = await Visitors.findById(current_user.user_access)
+        if(!visitor_collection){
+            res.status(404).send({ message: 'Unable to find the current user visitor collection to make a CSV file.'})
+        } else { 
+            // defines the CSV fields
+            const fields = ['email', 'country'];
+            // Convert 
+            const json2csvParser = new Parser({ fields });
+            const csv = json2csvParser.parse(visitor_collection.closed)
+            // return it as download
+            if(csv){
+                res.header('Content-Type', 'text/csv');
+                res.attachment('closed-clients.csv');
+                res.send(csv);
+            } else {
                 res.status(500)
             }
         }
@@ -281,4 +327,4 @@ const getVisitorListCSV = asyncHandler(async(req,res,next) => {
     }
 })
 
-export { registerUser, updateProfile, currentUser, clearNotifications, cleanUpNotifications, getVisitorListCSV }
+export { registerUser, updateProfile, currentUser, clearNotifications, cleanUpNotifications, getVisitorListCSV, getClosedClientsListCSV }

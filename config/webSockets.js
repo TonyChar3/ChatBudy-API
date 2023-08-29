@@ -21,12 +21,11 @@ export const webSocketServerSetUp = (redis_client, server) => {
         try{
             const jwt_connect = new URL(req.url, 'http://localhost:8080').searchParams.get('id');
             const decodeT = await decodeJWT(jwt_connect, 'WS');
-            
             // Decode the sent JWT and check if the data inside is valid
             if(!decodeT.id || !decodeT.userHash) {
                 socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
                 socket.destroy();
-                return;
+                return false;
             } else if(decodeT.id && decodeT.userHash && decodeT.logIN) {
                 // check the cache
                 const chat_room_cache = await verifyCache("Visitor_chat",redis_client, decodeT.id)

@@ -7,6 +7,7 @@ import Visitor from '../models/visitorsModels.js';
 import Chatroom from '../models/chatRoomModels.js';
 import User from '../models/userModels.js';
 import { sendUpdateToUser } from '../controllers/sseControllers.js';
+import { redis_chatroom } from '../server.js';
 
 dotenv.config();
 
@@ -108,15 +109,14 @@ const deleteVisitor = asyncHandler( async(req,res,next) => {
         if(visitor_index !== -1 && chatroom_index !== -1){
             user_visitors.visitor.splice(visitor_index, 1);
             user_chatrooms.chat_rooms.splice(chatroom_index,1);
-
+            const remove_cache = await redis_chatroom.del(visitor_id);
             const save_visitor = await user_visitors.save();
             const save_chatroom = await user_chatrooms.save();
 
-            if(save_visitor && save_chatroom){
+            if(save_visitor && save_chatroom && remove_cache){
                 sendUpdateToUser(userUID._id, user_visitors.visitor)
                 res.status(200).json({ message: "Visitor removed" });
             }
-            
         } else {
             res.status(404);
         }

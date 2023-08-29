@@ -49,7 +49,6 @@ class SalezyWidget {
     /**
      * Create and append a DIV element to the body
      */
-    
     const container = document.createElement("div");
     container.style.position = "fixed";
     container.style.zIndex = "20";
@@ -99,7 +98,6 @@ class SalezyWidget {
     this.widgetContainer.classList.add("content__hidden");
     document.addEventListener("DOMContentLoaded", () => {
       if(!this.DOMLoaded){
-        console.log("loading...")
         this.LoadUpsequence(this.widgetID);
         this.DOMLoaded = true;
       }
@@ -270,6 +268,18 @@ class SalezyWidget {
   }
 
   /**
+   * admin closed the Conversation message
+   */
+  handleConvoClosedMsg(){
+    const convoClosedMsgWrapper = document.createElement("div");
+    convoClosedMsgWrapper.classList.add('closed__convo_msg-wrapper');
+    const closedConvoH2 = document.createElement("h2");
+    closedConvoH2.textContent = "CONVO CLOSED";
+    convoClosedMsgWrapper.appendChild(closedConvoH2);
+    .appendChild(convoClosedMsgWrapper);
+  }
+
+  /**
    * Nope is click
    */
   handleNopeSubmitEmail(){
@@ -389,7 +399,11 @@ class SalezyWidget {
         return () => {
           socket.close();
         }
+      } else if (!socket){
+        this.loadingAnimationDIV.style.display = 'none';
+        this.handleConvoClosedMsg();
       }
+
     }
   }
 
@@ -413,7 +427,7 @@ class SalezyWidget {
   }
 }
 
-const initializeWidget = () => {
+export const initializeWidget = () => {
   return new SalezyWidget();
 }
 

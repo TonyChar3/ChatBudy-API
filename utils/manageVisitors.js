@@ -6,7 +6,6 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { sendUpdatedInfo } from '../controllers/sseControllers.js';
-import { ok } from 'assert';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -174,9 +173,7 @@ const generateJWT = async(visitor_id, user_hash, login_user) => {
  */
 const decodeJWT = async(token, type_name) => {
   try{
-
     let decodeToken;
-
     switch (type_name){
       case "WS":
         decodeToken = jsonwebtoken.verify(token, WS_PUB_KEY, { algorithms: 'RS256' })
@@ -186,12 +183,14 @@ const decodeJWT = async(token, type_name) => {
       default: 
         break;
     }
-
     if(decodeToken){
       return decodeToken
+    } else if (!decodeToken){
+      return false
     }
   } catch(err){
-    console.log(err)
+    console.log('Decode error: ', err)
+    return {}
   }
 }
 

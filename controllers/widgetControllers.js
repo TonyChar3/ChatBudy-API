@@ -9,7 +9,6 @@ import admin from 'firebase-admin';
 //@route GET /widget/chat-widget
 //@access PRIVATE
 const initializeWidget = asyncHandler( async(req,res,next) => {
-
     try{
         const { id } = req.params;
         const domainWidget = await Widget.findById(id);
@@ -47,11 +46,8 @@ const initializeWidget = asyncHandler( async(req,res,next) => {
 const widgetCustomLink = asyncHandler(async(req,res,next) => {
     try{
         const token = req.headers.authorization.split(" ")[1]
-
         const decodedToken = await admin.auth().verifyIdToken(token)
-
         if(decodedToken){
-
             const user = await User.findById(decodedToken.user_id);
             if(!user){
                 res.status(500);
