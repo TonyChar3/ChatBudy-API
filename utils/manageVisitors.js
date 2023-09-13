@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { sendUpdatedInfo } from '../controllers/sseControllers.js';
+import { sendVisitorNotifications } from '../controllers/widgetControllers.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -270,4 +271,89 @@ const checkRequestCache = async(redis_client, obj_email) => {
   }
 }
 
-export { generateRandomID, uniqueUserHash,uniqueVisitorID, getVisitorBrowser, generateJWT, decodeJWT, validUserAcess, setVisitorEmail, checkRequestCache }
+/**
+ * Authenticate the visitor to set up the SSE connection
+ */
+const visitorSSEAuth = async(req) => {
+  try{
+      // decode the cookie and validate the JWT
+      //TODO: Uncomment this for production to use httpOnly cookies
+      // const cookie_value = req.cookies
+      const cookie_value = req.headers.authorization.split(' ')[1]
+      if(cookie_value){
+        // verify and decode the JWT token in the cookie
+        const decoded = await decodeJWT(cookie_value, 'Visitor');
+        if(!decoded){
+          return
+        }
+        return decoded
+      } else {
+        return
+      }
+  } catch(err){
+    console.log('ERROR visitor sse auth: ', err)
+  }
+}
+
+/**
+ * Send visitor his new chats notifications
+ */
+const sendVisitorNotification = async(user_access, visitor_id) => {
+  try{
+    // get the correct visitor collection
+    const visitor_collection = await Visitor.findById(user_access);
+    if(!visitor_collection){
+      return
+    }
+    // get the array of notification
+    const visitor_index = visitor_collection.visitor.findIndex(visitor => visitor._id === visitor_id.toString());
+    if(visitor_index === -1){
+      return
+    }
+    // send the notification
+    const visitor_notifications = visitor_collection.visitor[visitor_index].notifications
+    sendVisitorNotifications(visitor_id, visitor_notifications);
+  } catch(err){
+    console.log('ERROR sending visitor notification: ', err)
+    return
+  }
+}
+
+/**
+ * Clear the visitors notifications when he opens the widget and the SSE closes
+ */
+const clearVisitorNotifications = async(user_access, visitor_id) =>{
+  try{
+    // find the visitor collection with the user_access
+    const visitor_collection = await Visitor.findById(user_access);
+    if(!visitor_collection){
+      return;
+    }
+    // inside the visitor collection visitor array find the index
+    const visitor_index = visitor_collection.visitor.findIndex(visitor => visitor._id.toString() === visitor_id.toString())
+    if(visitor_index === -1){
+      return;
+    }
+    // clear up the notifications array
+    visitor_collection.visitor[visitor_index].notifications = []
+    // save()
+    await visitor_collection.save();
+    sendVisitorNotifications(visitor_id, []);
+  } catch(err){
+    console.log('ERROR clearing visitor notifications: ',err)
+  }
+}
+
+export { 
+  generateRandomID, 
+  uniqueUserHash,
+  uniqueVisitorID, 
+  getVisitorBrowser, 
+  generateJWT, 
+  decodeJWT, 
+  validUserAcess, 
+  setVisitorEmail, 
+  checkRequestCache, 
+  visitorSSEAuth,
+  sendVisitorNotification,
+  clearVisitorNotifications }

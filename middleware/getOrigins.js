@@ -9,6 +9,8 @@ const setOriginsDomain = async() => {
         domains.push('http://127.0.0.1:5173')
         domains.push('http://localhost:5173')
         domains.push('http://10.0.0.78:5173')
+        domains.push('http://127.0.0.1:3000')
+        domains.push('http://10.0.0.78:3000')
         return domains
 
     } catch(err){

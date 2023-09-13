@@ -285,46 +285,4 @@ const getVisitorListCSV = asyncHandler(async(req,res,next) => {
     }
 });
 
-//@desc Get a CSV file of the closed clients list
-//@route GET /user/closed-clients-csv
-//@acces PRIVATE
-const getClosedClientsListCSV = asyncHandler(async(req,res,next) => {
-    try{
-        // get the verification firebase token
-        const token = req.headers.authorization.split(" ")[1]
-        // validate and decode the token
-        const decodedToken = await admin.auth().verifyIdToken(token)
-        // verify it
-        if(!decodedToken){
-            res.status(403);
-        }
-        // use the UID to find the user
-        const current_user = await User.findById(decodedToken.uid)
-        if(!current_user){
-            res.status(404).send({ message: "Current User info not found to create a CSV file."})
-        }
-        // use the User access hash to get the visitor list from the visitor collection
-        const visitor_collection = await Visitors.findById(current_user.user_access)
-        if(!visitor_collection){
-            res.status(404).send({ message: 'Unable to find the current user visitor collection to make a CSV file.'})
-        } else { 
-            // defines the CSV fields
-            const fields = ['email', 'country'];
-            // Convert 
-            const json2csvParser = new Parser({ fields });
-            const csv = json2csvParser.parse(visitor_collection.closed)
-            // return it as download
-            if(csv){
-                res.header('Content-Type', 'text/csv');
-                res.attachment('closed-clients.csv');
-                res.send(csv);
-            } else {
-                res.status(500)
-            }
-        }
-    } catch(err){
-        next(err)
-    }
-})
-
-export { registerUser, updateProfile, currentUser, clearNotifications, cleanUpNotifications, getVisitorListCSV, getClosedClientsListCSV }
+export { registerUser, updateProfile, currentUser, clearNotifications, cleanUpNotifications, getVisitorListCSV }

@@ -36,7 +36,13 @@ const createChatRoom = asyncHandler(async(req,res,next) => {
                 chat_rooms: new_room
             }
         });
-        if(add_newroom){
+        // add it to the cache
+        const cache_newroom = {
+            visitor: decoded.id,
+            messages: []
+        }
+        const cache_chatroom = await redis_chatroom.set(decoded.id, JSON.stringify(cache_newroom), "EX", 3600); 
+        if(add_newroom && cache_chatroom){
             res.status(201).json({ message: "New room created" });
         } else {
             res.status(500);
@@ -104,85 +110,20 @@ const UserAuthWS = asyncHandler(async(req,res,next) => {
         const token = req.headers.authorization.split(' ')[1]
         // check it using Firebase admin
         const verify_token = admin.auth().verifyIdToken(token)
-        if(verify_token){
-            const ws_token = await generateJWT(visitor_id, user_hash, user_hash)
-            if(ws_token){
-                res.status(201).send({ wss_jwt: ws_token.jwtToken})
-            } else {
-                res.status(500);
-            }
-        } else if(!verify_token){
+        if(!verify_token){
             // return error FORBIDDEN
             res.status(403);
         }
+        const ws_token = await generateJWT(visitor_id, user_hash, user_hash)
+        if(!ws_token){
+            res.status(500);
+        }
+        // send back the JWT token
+        res.status(201).send({ wss_jwt: ws_token.jwtToken})
     } catch(err){
         next(err)
     }
 }); 
 
-//@desc Route to close the selected client
-//@route POST /chat/close-client
-//@access PRIVATE
-const closeClient = asyncHandler(async(req,res,next) => {
-    try{
-        // get the visitor id from the body
-        const { visitr_id } = req.body.data
-        // get the verification firebase token
-        const token = req.headers.authorization.split(" ")[1]
-        // validate and decode the token
-        const decodedToken = await admin.auth().verifyIdToken(token)
-        // verify it
-        if(!decodedToken){
-            res.status(403);
-        }
-        // get the user
-        const current_user = await User.findById(decodedToken.uid)
-        if(!current_user){
-            res.status(404);
-            throw new Error('Error closing client. Unable to find client.')
-        }
-        // get the visitor array
-        const visitor_collection = await Visitor.findById(current_user.user_access)
-        if(!visitor_collection){
-            res.status(404);
-            throw new Error('Error closing client. Unable to find the user visitor collection.')
-        }
-        // get the chatroom array
-        const chatroom_collection = await ChatRoom.findById(current_user.user_access)
-        if(!chatroom_collection){
-            res.status(404);
-            throw new Error('Error closing client. Unable to find the user chatroom collection.')
-        }
-        // find the visitor with the received ID
-        const closed_visitor = visitor_collection.visitor.find(visitor => visitor._id.toString() === visitr_id.toString())
-        // find the chatroom
-        const closed_visitor_chatroom = chatroom_collection.chat_rooms.find(rooms => rooms.visitor.toString() === visitr_id.toString())
-        // add it to the closed array
-        if (closed_visitor && closed_visitor_chatroom){
-            // remove it from the visitor
-            visitor_collection.visitor = visitor_collection.visitor.filter(visitor => visitor._id.toString() !== visitr_id.toString())
-            // remove the chatroom
-            chatroom_collection.chat_rooms = chatroom_collection.chat_rooms.filter(rooms => rooms.visitor.toString() !== visitr_id.toString())
-            // add it to the closed array
-            visitor_collection.closed.push(closed_visitor);
-            // remove from the cache
-            const remove_cache_room = redis_chatroom.del(visitr_id);
-            // save the updates
-            const save_chatroom = await chatroom_collection.save();
-            const save_visitor = await visitor_collection.save();
-            if(save_chatroom && save_visitor && remove_cache_room){
-                sendUpdateToUser(decodedToken.uid, visitor_collection.visitor)
-                res.status(200).send({ message: 'Visitor closed' });
-            } else {
-                res.status(500);
-            }
-        } else {
-            res.status(500);
-        }
-    } catch(err){
-        next(err)
-    }
-});
 
-
-export { createChatRoom, AuthForWS, UserAuthWS, closeClient }
+export { createChatRoom, AuthForWS, UserAuthWS }

@@ -10,13 +10,11 @@ const widgetSchema = mongoose.Schema({
         type: String,
         required: true
     },
-    position: {
-        type: String
-    },
-    size: {
-        type: String
+    customization: {
+        position: {
+            type: String,
+        }
     }
-
 })
 
 export default mongoose.model("Widget", widgetSchema)

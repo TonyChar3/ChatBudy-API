@@ -3,6 +3,7 @@ import Visitors from '../models/visitorsModels.js';
 import User from '../models/userModels.js';
 import dotenv from 'dotenv';
 import { sendNotificationUpdate } from '../controllers/sseControllers.js';
+import { sendVisitorNotifications } from '../controllers/widgetControllers.js';
 
 dotenv.config();
 
@@ -13,7 +14,6 @@ const chat_rooms = new Map();
  */
 const saveChat = async(method, user_hash, visitor_id, new_chat) => {
     const BATCH_MAX = process.env.MAX_BATCH_SIZE
-
     try{
         switch (method){
             case 'ADD':
@@ -138,6 +138,35 @@ const verifyCache = async(verify_mode, client, visitor_id, chat_obj) => {
 }
 
 /**
+ * Function to check and set the chatroom in the WebSocket server
+ */
+const checkAndSetWSchatRoom = async(cache_key_name, redis_client, visitor_id, user_hash, connection_map) => {
+    try{
+        // cache_key_name =  Visitor_chat
+        const chat_room_cache = await verifyCache(cache_key_name,redis_client, visitor_id)
+        if(chat_room_cache){
+            if(!connection_map.get(visitor_id)){
+                connection_map.set(visitor_id, JSON.parse(chat_room_cache))
+            }
+            return { message: 'room found and set'}
+        } else if(!chat_room_cache){
+            // fetch the chatroom
+            const chat_room = await Chatroom.findById(user_hash)
+            if(chat_room){
+                const room_index = chat_room.chat_rooms.findIndex(rooms => rooms.visitor.toString() === visitor_id.toString());
+                if(room_index !== -1) {
+                    connection_map.set(visitor_id, chat_room.chat_rooms[room_index])
+                    await verifyCache(cache_key_name,redis_client, visitor_id, chat_room.chat_rooms[room_index])
+                } 
+            }
+            return { message: 'room found and set'}
+        }
+    } catch(err){
+        console.log('ERROR check and set chatroom function: ', err)
+    }
+}
+
+/**
  * Function to send notification
  */
 const sendNotification = async(client_type, user_hash, client_id, notif_object) => {
@@ -160,12 +189,11 @@ const sendNotification = async(client_type, user_hash, client_id, notif_object) 
                 visitor.notifications.push(notif_object)
                 // save it
                 const add_notification = await visitor_collection.save()
-                if(add_notification){
-                    visitor_notif_array.push(notif_object)
-                    break;
-                } else {
+                if(!add_notification){
                     throw new Error("Unable to notify the visitor...please try again")
                 }
+                sendVisitorNotifications(visitor._id, visitor_notif_array);
+                break;
             case "admin":
                 // check the user collection
                 const user_object = await User.findOne({ user_access: user_hash })
@@ -181,14 +209,13 @@ const sendNotification = async(client_type, user_hash, client_id, notif_object) 
                       }
                     }
                 });
-                if(update_array){
-                    const updated_array = await User.findOne({ user_access: user_hash })
-                    admin_notif_array.unshift(notif_object)
-                    sendNotificationUpdate(user_object._id, updated_array.notification)
-                    break;
-                } else {
+                const updated_array = await User.findOne({ user_access: user_hash })
+                if(!update_array){
                     throw new Error('Unable to notify... try again')
                 }
+                admin_notif_array.unshift(notif_object)
+                sendNotificationUpdate(user_object._id, updated_array.notification)
+                break; 
             default: 
                 break;
         }
@@ -225,4 +252,4 @@ const askEmailForm = async(user_hash, visitor_id) => {
     }
 }
 
-export { saveChat, verifyCache, sendNotification, cacheSentChat, askEmailForm }
+export { saveChat, verifyCache, sendNotification, cacheSentChat, askEmailForm, checkAndSetWSchatRoom }

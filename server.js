@@ -55,10 +55,8 @@ app.use(cookieParser());
 // User routes
 app.use('/user', userRoutes);
 
-app.use('/widget/:id', express.static('template'));
-
 // Widget routes
-app.use('/widget', widgetRoutes);
+app.use('/code', widgetRoutes);
 
 // Visitors routes
 app.use('/visitor', visitorRoutes);
