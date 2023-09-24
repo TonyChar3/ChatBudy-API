@@ -38,29 +38,12 @@ const visitorElementSchema = mongoose.Schema({
     timestamps: true
 });
 
-const closedVisitorElementSchema = mongoose.Schema({
-    _id: {
-        type: String,
-        required: true
-    },
-    email: {
-        type: String
-    },
-    country: {
-        type: String
-    }
-},
-{
-    timestamps: true
-});
-
 const visitorSchema = mongoose.Schema({
     _id: {
         type: String,
         required: true
     },
-    visitor: [visitorElementSchema],
-    closed: [closedVisitorElementSchema]
+    visitor: [visitorElementSchema]
 },
 {
     timestamps: true

@@ -12,7 +12,19 @@ const widgetSchema = mongoose.Schema({
     },
     customization: {
         position: {
-            type: String,
+            type: String
+        },
+        shape: {
+            type: String
+        },
+        main_color: {
+            type: String
+        },
+        greeting_message: {
+            type: String
+        },
+        admin_name: {
+            type: String
         }
     }
 })

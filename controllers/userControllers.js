@@ -48,7 +48,14 @@ const registerUser = asyncHandler(async(req,res,next) => {
                 // create the user widget
                 const widget = await Widget.create({
                     _id: u_hash,
-                    domain: web_url
+                    domain: web_url,
+                    customization: {
+                        position: "bottom-right",
+                        shape: "square",
+                        main_color: "#0c64f2",
+                        greeting_message: "Hi! Want to know about our special offer 👀?",
+                        admin_name: "Support agent 🤖"
+                    }
                 });
                 // create the user visitors array in the Visitors collection
                 const visitors = await Visitors.create({

@@ -1,6 +1,4 @@
 import asyncHandler from 'express-async-handler';
-import fs from 'fs';
-import path from 'path';
 import Widget from '../models/widgetModels.js';
 import User from '../models/userModels.js';
 import admin from 'firebase-admin';
@@ -9,7 +7,6 @@ import dotenv from 'dotenv';
 import axios from 'axios';
 
 dotenv.config();
-
 const sse_connections = new Map()
 let connect_sse = null;
 
@@ -20,25 +17,29 @@ const initializeWidget = asyncHandler( async(req,res,next) => {
     try{
         // take the user hash and fetch the widget collection
         const { userhash } = req.params
+        // verify if the user hash is still ok
+        const verify_user_access = await Widget.findOne({ _id: userhash })
+        if(!verify_user_access){
+            res.status(404).send('ERROR access to widget denied. user hash expired.')
+        }
         // get the loader script
         const response = await axios.get(process.env.WIDGET_TEMPLATE_URL)
         // run it
-        if (response.status === 200) {
+        if (response.status === 200 && verify_user_access) {
             // Replace '{{USER_HASH}}' with the actual user hash
             const scriptContent = response.data.replace('{{USER_HASH}}', userhash);
             // Send the modified script content as the response
             res.setHeader('Content-Type', 'application/javascript')
             res.send(scriptContent);
-        } else {
-            res.status(500).send('Error fetching template');
         }
     } catch(err) {
-        console.log(err)
+        console.log('ERROR initializing the widget: ',err)
         next(err)
     }
 });
-
 //@desc To give the script tag link to correct user
+//@route GET /code/link
+//@access PRIVATE
 const widgetCustomLink = asyncHandler(async(req,res,next) => {
     try{
         const token = req.headers.authorization.split(" ")[1]
@@ -55,7 +56,6 @@ const widgetCustomLink = asyncHandler(async(req,res,next) => {
         next(err)
     }
 });
-
 //@desc auth for the widget SSE connection
 //@route POST /code/sse-auth
 //@access PRIVATE
@@ -74,7 +74,6 @@ const widgetSSEAuth = asyncHandler( async(req,res,next) => {
         next(err);
     }
 });
-
 //@desc auth and set up an SSE connection for the widget notification
 //@route GET /code/sse-connection
 //@access PRIVATE
@@ -107,7 +106,64 @@ const widgetSSEConnection = asyncHandler(async(req,res,next) => {
         next(err)
     }
 });
+//@desc to get the customization object for the widget
+//@route GET /code/styling-:userhash
+//@access PUBLIC
+const widgetStyling = asyncHandler(async(req,res,next) => {
+    try{
+        // get the user_hash from the
+        const { userhash } = req.params
+        // fetch the correct widget
+        const widget_collection = await Widget.findById(userhash);
+        if(!widget_collection){
+            res.status(404);
+            next();
+            return
+        }
+        // get the customization
+        const customization_obj = widget_collection.customization
+        // send the object back to the  front-end
+        res.status(200).send({ widget_style: customization_obj });
+    } catch(err){
+        console.log('ERROR widget styling function: ', err);
+        next(err);
+    }
+});
+//@desc to save the updated customization for the widget
+//@route POST /code/save
+//@access PRIVATE
+const saveWidgetStyling = asyncHandler(async(req,res,next) => {
+    try{
+        // get the object from the body
+        const { customization_obj } = req.body
+        // verify the firebase token
+        const token = req.headers.authorization.split(" ")[1]
+        const decodedToken = await admin.auth().verifyIdToken(token);
+        // find the user collection for the user_access
+        const user = await User.findById(decodedToken.user_id);
+        // replace with the new style
+        let update = {$set: {}}
+        for (let key in customization_obj){
+            update.$set[`customization.${key}`] = customization_obj[key]
+        }
 
+        const update_widget = await Widget.findByIdAndUpdate(
+            {_id: user.user_access},
+            update,
+            {new:true}
+        );
+
+        if(update_widget) {
+            res.status(200).json({ message: "Widget updated" });
+        } else {
+            res.status(500);
+            next();
+        }
+    } catch(err){
+        console.log('ERROR saving widget styling: ', err)
+        next(err)
+    }
+});
 /**
  * Function to send notifications updates to the front-end
  */
@@ -120,4 +176,4 @@ const sendVisitorNotifications = (user_id, data) => {
 
 
 
-export { initializeWidget, widgetCustomLink, widgetSSEAuth, widgetSSEConnection, sendVisitorNotifications }
+export { initializeWidget, widgetCustomLink, widgetSSEAuth, widgetSSEConnection, sendVisitorNotifications, widgetStyling, saveWidgetStyling }
