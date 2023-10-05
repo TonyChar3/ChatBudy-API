@@ -11,22 +11,10 @@ const VerifyToken = async(req,res,next) => {
         if(value){
             return next();
         } else {
-            res.status(500);
-            throw new Error("Token Invalid")
+            res.status(500).send('Unauthorized');
         }
     } catch(err){
         console.log(err)
-        next(err)
-    }
-}
-/**
- * To verify the user hash
- */
-const VerifyHash = async(req,res,next) => {
-    try{
-        const { userhash } = req.params || req.body;
-        // fetch for the user_access with the user_hash
-    } catch(err){
         next(err)
     }
 }

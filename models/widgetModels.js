@@ -25,7 +25,14 @@ const widgetSchema = mongoose.Schema({
         },
         admin_name: {
             type: String
+        },
+        font_color: {
+            type: String
         }
+    },
+    installed: {
+        type: Boolean,
+        default: false
     }
 })
 

@@ -252,4 +252,35 @@ const askEmailForm = async(user_hash, visitor_id) => {
     }
 }
 
-export { saveChat, verifyCache, sendNotification, cacheSentChat, askEmailForm, checkAndSetWSchatRoom }
+/**
+ * Function to add to the conversion rate data 
+ */
+const SetConversionRate = async(user_hash) => {
+    try{
+        const today = new Date(); // Get today's date
+        // find the chatroom collection
+        const chatroom_collection = await Chatroom.findById(user_hash);
+        if(!chatroom_collection){
+            throw new Error('ERROR SetConversionRate(): Unable to find the user chatroom collection')
+        }
+        // find the index of an object that matches todays date
+        const conversion_object_index = chatroom_collection.conversionData.findIndex((objects) => objects.createdAt.toDateString() === today.toDateString())
+        // if found just increment by 1 the count of object
+        if(conversion_object_index !== -1){
+            chatroom_collection.conversionData[conversion_object_index].conversion_count += 1
+            await chatroom_collection.save();
+            return
+        }
+        // if nothing was found just create a new conversion Data object
+        const new_conversion = {
+            conversion_count: 1
+        };
+        chatroom_collection.conversionData.push(new_conversion);
+        await chatroom_collection.save();
+        return
+    } catch(err){
+        console.log(err)
+    }
+}
+
+export { saveChat, verifyCache, sendNotification, cacheSentChat, askEmailForm, checkAndSetWSchatRoom, SetConversionRate }

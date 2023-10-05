@@ -344,6 +344,55 @@ const clearVisitorNotifications = async(user_access, visitor_id) =>{
   }
 }
 
+/**
+ * Increment BrowserData object
+ */
+const SetBrowserData = async(browser_name, visitor_collection) => {
+  try{
+    // find out if there's already an object with todays date
+    const browser_data_index = visitor_collection.browserData.findIndex((data) => data.browser.toString() === browser_name.toString());
+    if(browser_data_index !== -1){
+      visitor_collection.browserData[browser_data_index].count +=1
+      return
+    }
+    // if nothing was found
+    const new_browser_data = {
+      browser: browser_name,
+      count: 1
+    }
+    visitor_collection.browserData.push(new_browser_data);
+    return
+
+  } catch(err){
+    console.log('ERROR SetBrowserData', err)
+  }
+}
+
+/**
+ * Increment visitorData object
+ */
+const SetVisitorData = async(visitor_collection) => {
+  try{
+    // get todays date
+    const today = new Date();
+    // find out if there's already an object with todays date
+    const visitor_data_index = visitor_collection.visitorData.findIndex((data) => data.createdAt.toDateString() === today.toDateString());
+    if(visitor_data_index !== -1){
+      visitor_collection.visitorData[visitor_data_index].visitor_count += 1
+      return
+    }
+    // if nothing is found
+    const new_visitor_data = {
+      visitor_count: 1
+    }
+    visitor_collection.visitorData.push(new_visitor_data);
+    return
+
+  } catch(err){
+    console.log('ERROR SetVisitorData', err)
+  }
+}
+
 export { 
   generateRandomID, 
   uniqueUserHash,
@@ -356,4 +405,6 @@ export {
   checkRequestCache, 
   visitorSSEAuth,
   sendVisitorNotification,
-  clearVisitorNotifications }
+  clearVisitorNotifications,
+  SetBrowserData,
+  SetVisitorData }

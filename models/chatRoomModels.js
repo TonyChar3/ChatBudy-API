@@ -1,5 +1,15 @@
+import { Int32 } from "mongodb";
 import mongoose from "mongoose";
 
+const conversionDataSchema = mongoose.Schema({
+    conversion_count: {
+        type: Number,
+        default: 0
+    }
+},
+{
+    timestamps: true
+});
 const chatMessageSchema = mongoose.Schema({
     text: {
         type: String,
@@ -36,6 +46,7 @@ const chatCollectionSchema = mongoose.Schema({
         type: String,
         required: true
     },
+    conversionData: [conversionDataSchema],
     chat_rooms: [chatRoomSchema]
 },
 {

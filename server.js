@@ -11,10 +11,22 @@ import visitorRoutes from './routes/visitorRoutes.js';
 import sseRoute from './routes/sseRoute.js';
 import chatRoute from './routes/chatRoute.js';
 import passwordUpdateRoute from './routes/passwordUpdateRoute.js';
+import shopifyRoute from './routes/shopifyRoute.js';
 import { corsOptions } from './middleware/getOrigins.js';
 import cookieParser from 'cookie-parser';
 import { webSocketServerSetUp } from './config/webSockets.js';
+import '@shopify/shopify-api/adapters/node';
+import {shopifyApi, LATEST_API_VERSION} from '@shopify/shopify-api';
 import redis from 'redis';
+
+const shopify = shopifyApi({
+    // The next 4 values are typically read from environment variables for added security
+    apiKey: process.env.SHOPIFY_PUBLIC,
+    apiSecretKey: process.env.SHOPIFY_PRIVATE,
+    scopes: ['read_products'],
+    apiVersion: LATEST_API_VERSION,
+    hostName: process.env.HOST_NAME,
+});
 
 const credentials = JSON.parse(fs.readFileSync('./firebaseKey/salezy-4de15-firebase-adminsdk-vql86-b2b376decd.json'))
 
@@ -37,6 +49,12 @@ const redis_rate_limit = redis.createClient({
     host: '127.0.0.1',
     port: REDIS_PORT,
     database: 1
+});
+
+const redis_nonce_storage = redis.createClient({
+    host: '127.0.0.1',
+    port: REDIS_PORT,
+    database: 2
 });
 
 const app = express();
@@ -70,6 +88,9 @@ app.use('/connection', sseRoute);
 // Password update route
 app.use('/password-update', passwordUpdateRoute);
 
+// Shopify integration route
+app.use('/shopify', shopifyRoute);
+
 const server = app.listen(port, async() => {
     console.log(`Server running on port ${port}`);
     redis_chatroom.connect().then(() => {
@@ -85,7 +106,13 @@ const server = app.listen(port, async() => {
     .catch((err) => {
         console.log('Redis rate limit client ERROR: ', err)
     });
+    redis_nonce_storage.connect().then(() => {
+        console.log('Redis nonce storage is connected');
+    })
+    .catch((err) => {
+        console.log('Redis nonce storage client ERROR: ', err)
+    });
 });
 
-export { redis_rate_limit, redis_chatroom }
+export { redis_rate_limit, redis_chatroom, redis_nonce_storage, shopify }
 

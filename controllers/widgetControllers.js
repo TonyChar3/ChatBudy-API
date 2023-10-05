@@ -3,6 +3,7 @@ import Widget from '../models/widgetModels.js';
 import User from '../models/userModels.js';
 import admin from 'firebase-admin';
 import { visitorSSEAuth, sendVisitorNotification, clearVisitorNotifications } from '../utils/manageVisitors.js';
+import { WidgetInstallStatus } from './sseControllers.js';
 import dotenv from 'dotenv';
 import axios from 'axios';
 
@@ -26,6 +27,8 @@ const initializeWidget = asyncHandler( async(req,res,next) => {
         const response = await axios.get(process.env.WIDGET_TEMPLATE_URL)
         // run it
         if (response.status === 200 && verify_user_access) {
+            // set installed to true
+            WidgetInstallStatus(userhash, true);
             // Replace '{{USER_HASH}}' with the actual user hash
             const scriptContent = response.data.replace('{{USER_HASH}}', userhash);
             // Send the modified script content as the response
@@ -120,10 +123,8 @@ const widgetStyling = asyncHandler(async(req,res,next) => {
             next();
             return
         }
-        // get the customization
-        const customization_obj = widget_collection.customization
         // send the object back to the  front-end
-        res.status(200).send({ widget_style: customization_obj });
+        res.status(200).send({ widget_style: widget_collection.customization });
     } catch(err){
         console.log('ERROR widget styling function: ', err);
         next(err);

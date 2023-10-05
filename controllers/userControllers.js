@@ -54,7 +54,8 @@ const registerUser = asyncHandler(async(req,res,next) => {
                         shape: "square",
                         main_color: "#0c64f2",
                         greeting_message: "Hi! Want to know about our special offer 👀?",
-                        admin_name: "Support agent 🤖"
+                        admin_name: "Support agent 🤖",
+                        font_color: "light"
                     }
                 });
                 // create the user visitors array in the Visitors collection

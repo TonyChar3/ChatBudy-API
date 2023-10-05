@@ -1,7 +1,7 @@
 import asyncHandler from 'express-async-handler';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
-import { getVisitorBrowser, generateJWT, generateRandomID } from '../utils/manageVisitors.js';
+import { getVisitorBrowser, generateJWT, generateRandomID, SetBrowserData, SetVisitorData } from '../utils/manageVisitors.js';
 import { sendNotification } from '../utils/manageChatRoom.js';
 import Visitor from '../models/visitorsModels.js';
 import Chatroom from '../models/chatRoomModels.js';
@@ -28,7 +28,6 @@ const visitorInfoFetch = asyncHandler( async(req,res,next) => {
         console.log(err)
     }
 });
-
 //@desc Route to create a new visitor
 //@route POST /visitor/new-visitor
 //@access PRIVATE
@@ -42,6 +41,12 @@ const createVisitor = asyncHandler(async(req,res,next) => {
         const visitor_browser = await getVisitorBrowser(browser);
        
         if( visitor && visitor_browser && uid) {
+            // increment visitorData count
+            SetVisitorData(visitor);
+            // increment browserData count
+            SetBrowserData(visitor_browser.name, visitor);
+            await visitor.save();
+            // create a new visitor 
             const visitor_array = visitor.visitor
             const newVisitor = {
                 _id: uid,
@@ -78,6 +83,7 @@ const createVisitor = asyncHandler(async(req,res,next) => {
                     throw new Error('Unable to generate JWT for visitor...please try again')
                 }
                 // res.cookie('visitor_jwt', generate_token, { maxAge: 48 * 60 * 60 * 1000, httpOnly:false, sameSite: false })
+                
                 res.send({ visitorToken: generate_token });
             }
         }
@@ -85,7 +91,6 @@ const createVisitor = asyncHandler(async(req,res,next) => {
         console.log(err)
     }
 });
-
 //@desc Route to delete a specific visitor along with the chatroom
 //@route DELETE /visitor/delete-visitor
 //@access PRIVATE
@@ -124,6 +129,5 @@ const deleteVisitor = asyncHandler( async(req,res,next) => {
         next(err);
     }
 });
-
 
 export { visitorInfoFetch, createVisitor, deleteVisitor }

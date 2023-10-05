@@ -1,4 +1,26 @@
+import { Int32 } from 'mongodb';
 import mongoose from 'mongoose';
+
+const browserDataElementSchema = mongoose.Schema({
+    browser: {
+        type: String,
+        required: true
+    },
+    count: {
+        type: Number,
+        default: 0
+    }
+});
+
+const visitorDataElementSchema = mongoose.Schema({
+    visitor_count: {
+        type: Number,
+        default: 0
+    }
+},
+{
+    timestamps: true
+});
 
 const visitorNotificationsSchema = mongoose.Schema({
     sent_from: {
@@ -43,6 +65,8 @@ const visitorSchema = mongoose.Schema({
         type: String,
         required: true
     },
+    visitorData: [visitorDataElementSchema],
+    browserData: [browserDataElementSchema],
     visitor: [visitorElementSchema]
 },
 {

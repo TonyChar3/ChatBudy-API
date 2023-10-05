@@ -1,6 +1,6 @@
 import { WebSocketServer } from 'ws';
 import { decodeJWT, setVisitorEmail } from '../utils/manageVisitors.js';
-import { saveChat, checkAndSetWSchatRoom, sendNotification, cacheSentChat, askEmailForm } from '../utils/manageChatRoom.js';
+import { saveChat, checkAndSetWSchatRoom, sendNotification, cacheSentChat, askEmailForm, SetConversionRate } from '../utils/manageChatRoom.js';
 import dotenv from 'dotenv';
 import { adminLogInStatus } from '../controllers/sseControllers.js';
 
@@ -112,6 +112,7 @@ export const webSocketServerSetUp = (redis_client, server) => {
                     break;
 
                 case 'set-email':
+                    SetConversionRate(userHash);// increment the conversion data count
                     const sanitized_value = received_msg.visitor_email.replace(/[^\w\s@.\-]/gi, '');
                     if(sanitized_value){
                         const set_email = await setVisitorEmail(userHash, visitorID, sanitized_value)
@@ -123,6 +124,8 @@ export const webSocketServerSetUp = (redis_client, server) => {
                                 title: `${visitorID} has set a new email`,
                                 content: `the new email: ${sanitized_value}`
                             }
+                            // get the conversionData from the ws_chatroom object
+                            // increment the count
                             sendNotification('admin', userHash, visitorID, notification_obj)
                         }
                     } else if (!sanitized_value){

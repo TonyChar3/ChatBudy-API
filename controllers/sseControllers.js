@@ -1,7 +1,8 @@
 import asyncHandler from 'express-async-handler';
 import admin from 'firebase-admin';
 import User from '../models/userModels.js';
-import Visitor from '../models/visitorsModels.js';
+import Visitors from '../models/visitorsModels.js';
+import ChatRoom from '../models/chatRoomModels.js';
 
 const connections = new Map()
 let connectedUser;
@@ -42,6 +43,7 @@ const SSEconnection = asyncHandler(async(req,res,next) => {
             connections.set(connectedUser.id, res);
             fetchAllVisitor();
             fetchAllNotification();
+            fetchAnalyticsData();
             
             res.on("error", (error) => {
                 console.log(error)
@@ -105,6 +107,20 @@ const sendUpdatedInfo = async(user_hash, data) => {
 }
 
 /**
+ * Function to send the analytics data update to the frontend
+ */
+const sendAnalyticsUpdate = async(user_id, data) => {
+    const connection = connections.get(user_id);
+    const analytics_object = {
+        type: 'analytics',
+        data: data
+    }
+    if(connection) {
+        connection.write(`data:${JSON.stringify(analytics_object)}\n\n`)
+    }
+}
+
+/**
  * Function to send the visitors array to the front-end
  */
 const fetchAllVisitor = async() => {
@@ -116,9 +132,9 @@ const fetchAllVisitor = async() => {
                 if(!user){
                     throw new Error("Unable to find your visitor array...please reload and try again")
                 }
-        
-                const visitor_array = await Visitor.findById(user.user_access);
-                if(!visitor_array){
+
+                const visitor_array = await Visitors.findById(user.user_access);
+                if(!visitor_array) {
                     throw new Error("Unable to find your visitor array...please reload and try again")
                 }
                 if(visitor_array.visitor.length > 0) {
@@ -158,6 +174,40 @@ const fetchAllNotification = async() => {
 }
 
 /**
+ * Function to send the chatroom analytics data to the front-end
+ */
+const fetchAnalyticsData = async() => {
+    try{
+        if(connectedUser){
+            const decodedToken = await admin.auth().verifyIdToken(connectedUser.accessToken)
+            if(decodedToken){
+                const user = await User.findById(decodedToken.uid);
+                if(!user){
+                    throw new Error("Unable to find your visitor array...please reload and try again")
+                }
+                const [ chatroom_collection, visitor_collection ] = await Promise.all([
+                    ChatRoom.findById(user.user_access),
+                    Visitors.findById(user.user_access)
+                ]);
+                if(!chatroom_collection){
+                    throw new Error('Unable to find the chatroom collection')
+                } else if (!visitor_collection){
+                    throw new Error('Unable to find the visitor collection')
+                }
+                const analytics_data = {
+                    conversion_data: chatroom_collection.conversionData,
+                    visitor_data: visitor_collection.visitorData,
+                    browser_data: visitor_collection.browserData
+                }
+                sendAnalyticsUpdate(user._id, analytics_data);
+            }
+        }
+    } catch(err){
+        console.log('Fetch chatroom analytics data: ',err)
+    }
+}
+
+/**
  * Function to send the Admin log in status to the widget
  */
 const adminLogInStatus = async(admin_hash) => {
@@ -183,5 +233,32 @@ const adminLogInStatus = async(admin_hash) => {
     }
 }
 
+/**
+ * Function to send the Widget Installed status
+ */
+const WidgetInstallStatus = async(user_hash, data) => {
+    try{
+        // fetch the user with his hash
+        const current_user = await User.findOne({ user_access: user_hash })
+        if(!current_user){
+            throw new Error('ERROR WidgetInstallStatus: Unable to find the user')
+        }
+        // send the widget status
+        const connection = connections.get(current_user._id);
+        const widget_status_object = {
+            type: 'widget_status',
+            data: data
+        }
+        // if the connection is not found
+        if(!connection) {
+            return
+        }
+        connection.write(`data:${JSON.stringify(widget_status_object)}\n\n`)
+    } catch(err){
+        console.log('ERROR setting the widget install status: ', err)
+        next(err)
+    }
+}
 
-export { SSEconnection, sendUpdateToUser, AuthSSEconnection, adminLogInStatus, sendNotificationUpdate, sendUpdatedInfo }
+
+export { SSEconnection, sendUpdateToUser, AuthSSEconnection, adminLogInStatus, sendNotificationUpdate, sendUpdatedInfo, sendAnalyticsUpdate, WidgetInstallStatus }
