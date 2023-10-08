@@ -185,6 +185,43 @@ const currentUser = asyncHandler(async(req,res,next) => {
     }
 });
 
+//@desc delete the user account from the DB + Firebase
+//@route DELETE /user/remove-profile
+//@access PRIVATE
+const DeleteUserAccount  = asyncHandler(async(req,res,next) => {
+    try{
+        // get the firebase token
+        const token = req.headers.authorization.split(' ')[1]
+        const decodedToken = await admin.auth().verifyIdToken(token)
+        // decode it
+        if(decodedToken){
+            // fetch and remove the User from the DB
+            const user = await User.findById(decodedToken.uid)
+            if(!user){
+                throw new Error('ERROR DeleteUserAccount(): Unable to find the user for deletion')
+            }
+
+            // remove the user from the db
+            await Promise.all([
+                await Visitors.deleteOne({ _id: user.user_access }),
+                await ChatRoom.deleteOne({ _id: user.user_access }),
+                await Widget.deleteOne({ _id: user.user_access })
+            ]);
+
+            // remove it from firebase
+            await Promise.all([
+                await User.deleteOne({ _id: decodedToken.uid }),
+                await admin.auth().deleteUser(decodedToken.uid)
+            ]);
+            // send back success
+            res.status(201).send({ user_deleted: true });
+        }
+    } catch(err){
+        console.log('ERROR DeleteUserAccount(): ', err);
+        next(err);
+    }
+})
+
 //@desc CLEAR the user notification array
 //@route DELETE /user/clear-notification
 //@access PRIVATE
@@ -293,4 +330,4 @@ const getVisitorListCSV = asyncHandler(async(req,res,next) => {
     }
 });
 
-export { registerUser, updateProfile, currentUser, clearNotifications, cleanUpNotifications, getVisitorListCSV }
+export { registerUser, updateProfile, currentUser, clearNotifications, cleanUpNotifications, getVisitorListCSV, DeleteUserAccount }
