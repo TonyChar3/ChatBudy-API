@@ -1,11 +1,10 @@
 import express from 'express';
-import { SSEconnection, AuthSSEconnection } from '../controllers/sseControllers.js';
-
+import { connectionSSE, authSSEconnection } from '../controllers/sseControllers.js';
 
 const router = express.Router();
 
-router.get('/auth-sse', AuthSSEconnection)
+router.get('/auth-sse', authSSEconnection);
 
-router.get('/sse', SSEconnection)
+router.get('/sse', connectionSSE);
 
 export default router

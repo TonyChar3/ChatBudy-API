@@ -1,4 +1,4 @@
-import Constant from "../constants";
+import Constant from "../constants.js";
 
 /**
  * Handle the error from every async routes using the Constants

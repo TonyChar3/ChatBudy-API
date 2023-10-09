@@ -1,8 +1,8 @@
 import { WebSocketServer } from 'ws';
 import { decodeJWT, setVisitorEmail } from '../utils/manageVisitors.js';
-import { saveChat, checkAndSetWSchatRoom, sendNotification, cacheSentChat, askEmailForm, SetConversionRate } from '../utils/manageChatRoom.js';
+import { saveChat, checkAndSetWSchatRoom, sendWsUserNotification, cacheSentChat, askEmailForm, setConversionRate } from '../utils/manageChatRoom.js';
 import dotenv from 'dotenv';
-import { adminLogInStatus } from '../controllers/sseControllers.js';
+import { adminLogInStatus } from '../utils/manageSSE.js';
 
 dotenv.config();
 
@@ -14,26 +14,26 @@ let user_ws_connected;
 let data_to_send = null;
 
 export const webSocketServerSetUp = (redis_client, server) => {
-    const connections = new Map();// Map to track the chatrooms object
+    const chatrooms_map = new Map();// Map to track the chatrooms object
     const wss_connections = new Map();//Map to track the right WebSocket connections
-    const wss = new WebSocketServer({ noServer: true });
+    const wss = new WebSocketServer({ noServer: true });// start new WebSocket server
 
     server.on('upgrade', async(req, socket, head) => {
         try{
             const jwt_connect = new URL(req.url, 'http://localhost:8080').searchParams.get('id');
-            const decodeT = await decodeJWT(jwt_connect, 'WS');
+            const decode_token = await decodeJWT(jwt_connect, 'WS');
             // Decode the sent JWT and check if the data inside is valid
-            if(!decodeT.id || !decodeT.userHash) {
+            if(!decode_token.id || !decode_token.userHash) {
                 socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
                 socket.destroy();
                 return false;
             }
             // set the variables
-            userHash = decodeT.userHash
-            visitorID = decodeT.id
-            user_type_login = decodeT.logIN
+            userHash = decode_token.userHash
+            visitorID = decode_token.id
+            user_type_login = decode_token.logIN
             // check the cache and set the chatroom
-            const check_for_chatroom = await checkAndSetWSchatRoom("Visitor_chat", redis_client, visitorID, userHash, connections)
+            const check_for_chatroom = await checkAndSetWSchatRoom("Visitor_chat", redis_client, visitorID, userHash, chatrooms_map);
             if(!check_for_chatroom.message){
                 socket.write('HTTP/1.1 404 Chatroom Not found\r\n\r\n');
                 socket.destroy();
@@ -56,22 +56,18 @@ export const webSocketServerSetUp = (redis_client, server) => {
         }
     });
 
-    wss.on('connection',async(ws, req) => {
+    wss.on('connection',async(ws,req) => {
         ws["id"] = visitorID
-        const ws_chatroom = connections.get(visitorID)
+        const ws_chatroom = chatrooms_map.get(visitorID)
         const [admin_status, ask_email] = await Promise.all([
+            // get the admin connection status
             adminLogInStatus(userHash),
+            // check if we need to ask for the email
             askEmailForm(userHash, visitorID)
-        ])
-        // set the current-connected user
-        const connected_user = {
-            id: user_type_login,
-            ws: ws
-        }
-
-        const connect_array = wss_connections.get(visitorID) || [];
-        connect_array.push(connected_user);
-        wss_connections.set(visitorID, connect_array);
+        ]);
+        const connect_user_array = wss_connections.get(visitorID) || [];
+        connect_user_array.push({ id: user_type_login, ws: ws });// set a new connected user into the array
+        wss_connections.set(visitorID, connect_user_array);
 
         if(user_type_login === visitorID){
             // check if the visitor email is set
@@ -98,51 +94,43 @@ export const webSocketServerSetUp = (redis_client, server) => {
             switch (received_msg.type || received_msg.senderType){
                 case 'typing':
                     if(ws.id.toString() === ws_chatroom.visitor.toString()){
-                        const message = {
-                            type: '...',
-                            status: received_msg.status
-                        }
                         // Broadcast the message to all connected clients except the sender
                         user_ws_connected.forEach(client => {
                             if (client.ws !== ws) {
-                                client.ws.send(JSON.stringify(message), { binary: isBinary });
+                                client.ws.send(JSON.stringify({ type: '...', status: received_msg.status }), { binary: isBinary });
                             }
                         });
                     }
                     break;
 
                 case 'set-email':
-                    SetConversionRate(userHash);// increment the conversion data count
+                    setConversionRate(userHash);// increment the conversion data count
                     const sanitized_value = received_msg.visitor_email.replace(/[^\w\s@.\-]/gi, '');
                     if(sanitized_value){
                         const set_email = await setVisitorEmail(userHash, visitorID, sanitized_value)
                         if(set_email){
-                            ws.send(JSON.stringify(ws_chatroom.messages))
-                            // notify the admin
-                            notification_obj = {
-                                sent_from: 'Admin',
-                                title: `${visitorID} has set a new email`,
-                                content: `the new email: ${sanitized_value}`
-                            }
-                            // get the conversionData from the ws_chatroom object
-                            // increment the count
-                            sendNotification('admin', userHash, visitorID, notification_obj)
+                            ws.send(JSON.stringify(ws_chatroom.messages));
+                            // send a new notification
+                            sendWsUserNotification('admin', userHash, visitorID, { 
+                                sent_from: 'Admin', 
+                                title: `${visitorID} has set a new email`, 
+                                content: `the new email: ${sanitized_value}` 
+                            });
                         }
                     } else if (!sanitized_value){
-                        const dummy_email = `#${visitorID}`
-                        const set_dummy_email = await setVisitorEmail(userHash, visitorID, dummy_email)
+                        const dummy_email = `#${visitorID}`;
+                        const set_dummy_email = await setVisitorEmail(userHash, visitorID, dummy_email);
                         if(!set_dummy_email){
-                            console.log('ERROR setting the dummy email for the visitor')
+                            console.log('ERROR setting the dummy email for the visitor');
                             break;
                         }
-                        ws.send(JSON.stringify(ws_chatroom.messages))
-                        // notify the admin
-                        notification_obj = {
+                        ws.send(JSON.stringify(ws_chatroom.messages));
+                        // notify the admin 
+                        sendWsUserNotification('admin', userHash, visitorID, {
                             sent_from: 'Admin',
                             title: `${visitorID} has refused to provide his email`,
                             content: 'No email provided from the visitor'
-                        }
-                        sendNotification('admin', userHash, visitorID, notification_obj)
+                        });
                     }
                     break;
 
@@ -178,21 +166,19 @@ export const webSocketServerSetUp = (redis_client, server) => {
                         user_ws_connected.forEach(connections => {
                             switch (connections.id){
                                 case visitorID:
-                                    notification_obj = {
+                                    sendWsUserNotification('admin', userHash, visitorID, {
                                         sent_from: visitorID,
                                         title: `${visitorID} has sent you a new chat`,
                                         content: received_msg.content,
                                         action: visitorID
-                                    }
-                                    sendNotification('admin', userHash, visitorID, notification_obj)
+                                    });
                                     break;
                                 case userHash:
-                                    notification_obj = {
+                                    sendWsUserNotification('visitor', userHash, visitorID, {
                                         sent_from: 'Agent',
                                         title: `New chat from support`,
                                         content: received_msg.content
-                                    }
-                                    sendNotification('visitor', userHash, visitorID, notification_obj)
+                                    });
                                     break;
                                 default:
                                     break;
@@ -201,21 +187,19 @@ export const webSocketServerSetUp = (redis_client, server) => {
                     }
                 }
                 // cache and save the chat
-                cacheSentChat(redis_client, userHash, ws.id, ws_chatroom, new_msg)
+                cacheSentChat(redis_client, userHash, ws.id, ws_chatroom, new_msg);
                 new_msg = {}
             }
         });
         ws.on('error', async(error) => {
-            await saveChat('SAVE', userHash, ws.id)
+            await saveChat('SAVE', userHash, ws.id);
             ws.close();
         });
         ws.on('close', async() => {
-            await saveChat('SAVE', userHash, ws.id)
-            const remove_ws = wss_connections.get(visitorID)
-            const updated_remove_ws = remove_ws.filter((connection) => connection.ws !== ws);
-            if(updated_remove_ws){
-                wss_connections.set(visitorID, updated_remove_ws)
-            }
+            await saveChat('SAVE', userHash, ws.id);
+            const rogue_ws_connection = wss_connections.get(visitorID);
+            const updated_remove_ws = rogue_ws_connection.filter((connection) => connection.ws !== ws);
+            wss_connections.set(visitorID, updated_remove_ws);
         });
     });
 }

@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import { shopify } from '../server.js';
 import { redis_nonce_storage } from '../server.js';
 import { verifyShopifyDomain } from '../utils/manageShopify.js';
+import { VerifyFirebaseToken } from '../middleware/authHandle.js';
 import queryString from 'query-string';
 import crypto from 'crypto';
 import axios from 'axios';
@@ -12,18 +13,16 @@ dotenv.config()
 //@desc test route to get a feel of the shopify api
 //@route POST /shopify/auth
 //@access PRIVATE
-const shopifytesting = asyncHandler( async(req, res, next) => {
+const shopifyAuth = asyncHandler( async(req, res, next) => {
     try{
         const { shop_name } = req.body
-        if(!shop_name){
-            console.log('ERROR shopify auth begin: No shop name set.')
-            next()
-        }
+        await VerifyFirebaseToken(req,res);
+        // verify the shopify domain name
         const verified_shop_name = verifyShopifyDomain(shop_name);
         if(!verified_shop_name){
             // send back a error msg to the front-end
-            res.send({ domain_error: true });
-            next()
+            res.status(401).send({ domain_error: true });
+            next();
         } else {
             const apiKey = process.env.SHOPIFY_PUBLIC
             const redirectUri = process.env.HOST_NAME + '/shopify/callback'
@@ -31,14 +30,13 @@ const shopifytesting = asyncHandler( async(req, res, next) => {
             const authUrl = `https://${shop_name}/admin/oauth/authorize?client_id=${apiKey}&scope=write_products&redirect_uri=${redirectUri}&state=${shopState}`;
     
             redis_nonce_storage.set(`nonce:${shopState}`, shopState, 'EX', 10);
-            res.send(authUrl)
+            res.send(authUrl);
         }
     } catch(err){
-        console.log(err)
+        console.log('Shopify ')
         next(err)
     }
 });
-
 //@desc route to build the shopify app install and redirect the user to install
 //@route /shopify/callback
 //@access PRIVATE
@@ -47,7 +45,8 @@ const shopifyCallback = asyncHandler(async(req,res,next) => {
         const stateCookie = await redis_nonce_storage.get(`nonce:${state}`)
      
         if (state !== stateCookie) {
-            return res.status(403).send('Request origin cannot be verified');
+            res.status(403).send('Request origin cannot be verified');
+            next();
         }
      
         if (shop && hmac && code) {
@@ -66,7 +65,8 @@ const shopifyCallback = asyncHandler(async(req,res,next) => {
             };
          
             if (!hashEquals) {
-                return res.status(400).send('HMAC validation failed');
+                res.status(400)
+                next('HMAC validation failed');
             }
             const accessTokenRequestUrl = `https://${shop}/admin/oauth/access_token?client_id=${process.env.SHOPIFY_PUBLIC}&client_secret=${process.env.SHOPIFY_PRIVATE}&code=${code}`;
             const accessTokenPayload = {
@@ -93,16 +93,19 @@ const shopifyCallback = asyncHandler(async(req,res,next) => {
                     res.redirect(`https://${shop}/admin/themes/current/editor?context=apps&template=product&activateAppId=${process.env.SHOPIFY_APP_ID}`);
                 })
                 .catch((error) => {
-                    res.status(500).send(error);
+                    res.status(500);
+                    next(error);
                 });
             }) 
             .catch((error) => {
-                res.status(500).send(error);
+                res.status(500);
+                next(error);
             });
   
         } else {
             res.status(400).send('Required parameters missing');
+            next();
         }
 })
 
-export { shopifytesting, shopifyCallback }
+export { shopifyAuth, shopifyCallback }

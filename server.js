@@ -18,7 +18,15 @@ import { webSocketServerSetUp } from './config/webSockets.js';
 import '@shopify/shopify-api/adapters/node';
 import {shopifyApi, LATEST_API_VERSION} from '@shopify/shopify-api';
 import redis from 'redis';
+import errorHandler from './middleware/errorHandler.js';
 
+/**
+ * ChatBüdy project Nodejs + Express API
+ * 
+ * made by TonyChar3
+ */
+
+// initiate Shopify Api
 const shopify = shopifyApi({
     // The next 4 values are typically read from environment variables for added security
     apiKey: process.env.SHOPIFY_PUBLIC,
@@ -28,46 +36,49 @@ const shopify = shopifyApi({
     hostName: process.env.HOST_NAME,
 });
 
+// initate Firebase Admin SDK
 const credentials = JSON.parse(fs.readFileSync('./firebaseKey/salezy-4de15-firebase-adminsdk-vql86-b2b376decd.json'))
-
 admin.initializeApp({
     credential: admin.credential.cert(credentials)
 });
 
+// use .env variables
 dotenv.config();
 
+// connect our MongoDB cluster
 connectDB();
 
+// Connect Redis and set up mutliple clients
 const REDIS_PORT = process.env.REDIS_PORT
+// cache chatrooms
 const redis_chatroom = redis.createClient({
     host: '127.0.0.1',
     port: REDIS_PORT,
     database: 0
 });
-
+// cache rate_limit count
 const redis_rate_limit = redis.createClient({
     host: '127.0.0.1',
     port: REDIS_PORT,
     database: 1
 });
-
+// cache shopify nonce 
 const redis_nonce_storage = redis.createClient({
     host: '127.0.0.1',
     port: REDIS_PORT,
     database: 2
 });
 
+// Set up Express
 const app = express();
 const port = process.env.PORT || 8000
-
 app.use(express.json());
-
 app.use(express.urlencoded({ extended: true }));
 
+// enable CORS
 app.use(cors(corsOptions));
-
+// Security purposes
 app.use(helmet());
-
 app.use(cookieParser());
 
 // User routes
@@ -91,8 +102,15 @@ app.use('/password-update', passwordUpdateRoute);
 // Shopify integration route
 app.use('/shopify', shopifyRoute);
 
+// handle the error
+app.use(errorHandler);
+
+// Connect and start the server
 const server = app.listen(port, async() => {
     console.log(`Server running on port ${port}`);
+    /**
+     * Connect the different Redis client to export them
+     */
     redis_chatroom.connect().then(() => {
         console.log('Redis chatroom client is connected')
         webSocketServerSetUp(redis_chatroom, server);

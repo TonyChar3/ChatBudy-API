@@ -10,20 +10,21 @@ const RequestSentLimitCheck = asyncHandler(async(req,res,next) => {
         // get the object in the request body
         const { limit_obj } = req.body
         // check the cache for the object
-        const verify_cache = await checkRequestCache(redis_rate_limit, limit_obj.email)
+        const verify_cache = await checkRequestCache(redis_rate_limit, limit_obj.email);
         // if it exceeds 5 return a false 
         if(!verify_cache){
             // else just return false
-            res.status(200).send({ request_allowed: false })
+            res.status(200).send({ request_allowed: false });
         } else if (verify_cache){
             // return true
-            res.status(200).send({ request_allowed: true })
+            res.status(200).send({ request_allowed: true });
         } else {
             res.status(500);
-            throw new Error('RequestSentLimitCheck funciton ERROR: Unable to send or check the sent request count')
+            next();
         }
     } catch(err){
-        next(err)
+        console.log('ERROR RequestSentLimitCheck');
+        next(err);
     }
 });
 

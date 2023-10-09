@@ -5,8 +5,7 @@ import jsonwebtoken from 'jsonwebtoken';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { sendUpdatedInfo } from '../controllers/sseControllers.js';
-import { sendVisitorNotifications } from '../controllers/widgetControllers.js';
+import { sendAdminFreshUpdatedInfo, sendWidgetVisitorNotifications } from './manageSSE.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,7 +30,6 @@ const generateRandomID = () => {
     const randomID = hash.digest('hex').substring(0,10);
     return randomID;
 }
-
 /**
  * Make sure there's no duplicate hash for the User
  */
@@ -52,7 +50,6 @@ const uniqueUserHash = async() => {
         }
     } while (hash_flag === true);
 }
-
 /**
 * Visitor unique Identifier generator
 */
@@ -61,14 +58,12 @@ const uniqueVisitorID = async(array_id) => {
     let visitor_uid;
     // flag for the uid duplicate check
     let uid_flag = true
-
     // find the visitor array
     const visitor_array = await Visitor.findById(array_id);
     if(!visitor_array){
-        res.status(404);
-        throw new Error("Error! The visitor array to modified wasn't found...please try again")
+        throw new Error("ERROR uniqueVisitorID(): The visitor array to modified wasn't found...please try again");
     }
-
+    // do ... while
     do {
         // generate the ID
         visitor_uid = generateRandomID();
@@ -83,11 +78,10 @@ const uniqueVisitorID = async(array_id) => {
     } while (uid_flag === true); 
     return visitor_uid;
 }
-
 /**
  * Get the visitor specific browser
  */
-const getVisitorBrowser = async(browser_info) => {
+const getVisitorBrowser = (browser_info) => {
     const userAgent = browser_info;
 
     let browserName;
@@ -119,37 +113,34 @@ const getVisitorBrowser = async(browser_info) => {
         browserVersion = "Unknown";
         break;
     }
-  
+    // return browser object
     return {
       name: browserName,
       version: browserVersion
     };
 }
-
 /**
  * Create a JWT with the new visitor ID's
  */
-const generateJWT = async(visitor_id, user_hash, login_user) => {
+const generateJWT = (visitor_id, user_hash, login_user) => {
   try{
+    // for the visitor to connect to the WS server
     if(visitor_id && !user_hash){
       const _id = visitor_id;
-
       const payload = {
         id: _id,
         iat: Math.floor(Date.now() / 1000),
         exp: Math.floor(Date.now() / 1000) + (48 * 60 * 60)
       };
-  
       const signedToken = jsonwebtoken.sign(payload, PRIV_KEY, { algorithm: 'RS256' });
-  
       return {
         jwtToken: signedToken
       }
+    // for the admin to connect to the WS server
     } else if(visitor_id && user_hash && login_user){
       const _id = visitor_id;
       const userHash = user_hash;
       const log_in_user = login_user
-
       const payload = {
         id: _id,
         userHash: userHash,
@@ -157,18 +148,16 @@ const generateJWT = async(visitor_id, user_hash, login_user) => {
         iat: Math.floor(Date.now() / 1000),
         exp: Math.floor(Date.now() / 1000) + (48 * 60 * 60)
       };
-  
       const signedToken = jsonwebtoken.sign(payload, WS_PRIV_KEY, { algorithm: 'RS256' });
-  
       return {
         jwtToken: signedToken
       }
     }
   } catch(err){
-    console.log(err)
+    console.log('ERROR generateJWT()');
+    throw new Error(`ERROR generateJWt(): ${err}`);
   }
 }
-
 /**
  * Decode the JWT sent back from the backend
  */
@@ -190,27 +179,10 @@ const decodeJWT = async(token, type_name) => {
       return false
     }
   } catch(err){
-    console.log('Decode error: ', err)
+    console.log('ERROR decodeJWT(): ',err);
     return {}
   }
 }
-
-/**
- * Make sure the user access hash is valid
- */
-const validUserAcess = async(hash) => {
-  try{
-    const valid_hash = await User.findOne({ user_access: hash });
-    if(valid_hash){
-      return true
-    } else {
-      return false
-    }
-  } catch(err){
-    console.log(err)
-  }
-}
-
 /**
  * Set the visitor email section
  */
@@ -219,58 +191,58 @@ const setVisitorEmail = async(user_hash, visitor_id, email) => {
     // find user visitor collection
     const visitor_collection = await Visitor.findById(user_hash);
     if(!visitor_collection){
-      throw new Error("Setting visitor email ERROR: Unable to find the visitor to set the email...")
+      throw new Error("ERROR setVisitorEmail(): Unable to find the visitor to set the email");
     }
     // get the visitor object index in the user visitor array
     const visitor_index = visitor_collection.visitor.findIndex(visitor => visitor._id.toString() === visitor_id.toString());
     if(visitor_index === -1){
-      throw new Error("Setting visitor email ERROR: Unable to find the visitor index to set the email...")
+      throw new Error("ERROR setVisitorEmail(): Unable to find the visitor index to set the email...");
     } 
     // set the new field
     visitor_collection.visitor[visitor_index].email = email;
     // save it
-    const save_updates = await visitor_collection.save()
-    if(save_updates){
-      sendUpdatedInfo(user_hash, visitor_collection.visitor)
-      return true
-    } else {
-      throw new Error('Setting visitor email ERROR: unable to save the updated visitor')
+    const save_updates = await visitor_collection.save();
+    if(!save_updates){
+      throw new Error('ERROR setVisitorEmail(): unable to save the updated visitor');
     }
+    // send new info to the admin panel
+    sendAdminFreshUpdatedInfo(user_hash, visitor_collection.visitor);
+    return true;
   } catch(err){
-    console.log(err)
+    console.log('ERROR setVisitorEmail()');
+    throw new Error(`ERROR setVisitorEmail(): ${err}`);
   }
 }
-
 /**
  * Check the request limit objects in the redis cache
  */
 const checkRequestCache = async(redis_client, obj_email) => {
   try{
     const cached_object = await redis_client.get(obj_email);
-    if(cached_object){
-      let count = JSON.parse(cached_object)
-      if(count === 3){
-        const block_request = await redis_client.expire(obj_email, 10);
-        if(block_request){
-          return false
-        }
-      } else if (count <= 3){
-        const increment_count = count += 1
-        const new_count = await redis_client.set(obj_email, JSON.stringify(increment_count), "EX", 86400);
-        if(new_count){
-          return true
-        }
-      }
-    } else if (!cached_object){
+    if (!cached_object){
       // set the new obj in the db 1
       await redis_client.set(obj_email, JSON.stringify(1), "EX", 86400);
       return true
     }
+    let count = JSON.parse(cached_object)
+    if(count === 3){
+      const block_request = await redis_client.expire(obj_email, 10);
+      if(block_request){
+        return false
+      }
+    } else if (count <= 3){
+      const increment_count = count += 1
+      const new_count = await redis_client.set(obj_email, JSON.stringify(increment_count), "EX", 86400);
+      if(!new_count){
+        throw new Error('ERRPR checkRequestCache(): Unable to set a new cached email.');
+      }
+      return true
+    }
   } catch(err){
-    console.log(err)
+    console.log('ERROR checkRequestCache()');
+    throw new Error(`ERROR checkRequestCache(): ${err}`);
   }
 }
-
 /**
  * Authenticate the visitor to set up the SSE connection
  */
@@ -280,21 +252,20 @@ const visitorSSEAuth = async(req) => {
       //TODO: Uncomment this for production to use httpOnly cookies
       // const cookie_value = req.cookies
       const cookie_value = req.headers.authorization.split(' ')[1]
-      if(cookie_value){
-        // verify and decode the JWT token in the cookie
-        const decoded = await decodeJWT(cookie_value, 'Visitor');
-        if(!decoded){
-          return
-        }
-        return decoded
-      } else {
+      if(!cookie_value){
         return
       }
+      // verify and decode the JWT token in the cookie
+      const decoded = await decodeJWT(cookie_value, 'Visitor');
+      if(!decoded){
+        return {}
+      }
+      return decoded
   } catch(err){
-    console.log('ERROR visitor sse auth: ', err)
+    console.log('ERROR visitorSSEAuth()');
+    throw new Error(`ERROR visitorSSEAuth(): ${err}`);
   }
 }
-
 /**
  * Send visitor his new chats notifications
  */
@@ -312,13 +283,12 @@ const sendVisitorNotification = async(user_access, visitor_id) => {
     }
     // send the notification
     const visitor_notifications = visitor_collection.visitor[visitor_index].notifications
-    sendVisitorNotifications(visitor_id, visitor_notifications);
+    sendWidgetVisitorNotifications(visitor_id, visitor_notifications);
   } catch(err){
-    console.log('ERROR sending visitor notification: ', err)
+    console.log('ERROR sendVisitorNotification(): ', err);
     return
   }
 }
-
 /**
  * Clear the visitors notifications when he opens the widget and the SSE closes
  */
@@ -330,7 +300,7 @@ const clearVisitorNotifications = async(user_access, visitor_id) =>{
       return;
     }
     // inside the visitor collection visitor array find the index
-    const visitor_index = visitor_collection.visitor.findIndex(visitor => visitor._id.toString() === visitor_id.toString())
+    const visitor_index = visitor_collection.visitor.findIndex(visitor => visitor._id.toString() === visitor_id.toString());
     if(visitor_index === -1){
       return;
     }
@@ -338,16 +308,16 @@ const clearVisitorNotifications = async(user_access, visitor_id) =>{
     visitor_collection.visitor[visitor_index].notifications = []
     // save()
     await visitor_collection.save();
-    sendVisitorNotifications(visitor_id, []);
+    sendWidgetVisitorNotifications(visitor_id, []);
   } catch(err){
-    console.log('ERROR clearing visitor notifications: ',err)
+    console.log('ERROR clearVisitorNotifications(): ',err);
+    return
   }
 }
-
 /**
  * Increment BrowserData object
  */
-const SetBrowserData = async(browser_name, visitor_collection) => {
+const setBrowserData = async(browser_name, visitor_collection) => {
   try{
     // find out if there's already an object with todays date
     const browser_data_index = visitor_collection.browserData.findIndex((data) => data.browser.toString() === browser_name.toString());
@@ -364,14 +334,14 @@ const SetBrowserData = async(browser_name, visitor_collection) => {
     return
 
   } catch(err){
-    console.log('ERROR SetBrowserData', err)
+    console.log('ERROR setBrowserData(): ', err);
+    return
   }
 }
-
 /**
  * Increment visitorData object
  */
-const SetVisitorData = async(visitor_collection) => {
+const setVisitorData = async(visitor_collection) => {
   try{
     // get todays date
     const today = new Date();
@@ -389,7 +359,7 @@ const SetVisitorData = async(visitor_collection) => {
     return
 
   } catch(err){
-    console.log('ERROR SetVisitorData', err)
+    console.log('ERROR setVisitorData()', err);
   }
 }
 
@@ -399,12 +369,11 @@ export {
   uniqueVisitorID, 
   getVisitorBrowser, 
   generateJWT, 
-  decodeJWT, 
-  validUserAcess, 
+  decodeJWT,  
   setVisitorEmail, 
   checkRequestCache, 
   visitorSSEAuth,
   sendVisitorNotification,
   clearVisitorNotifications,
-  SetBrowserData,
-  SetVisitorData }
+  setBrowserData,
+  setVisitorData }
