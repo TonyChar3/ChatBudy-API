@@ -18,7 +18,7 @@ import { webSocketServerSetUp } from './config/webSockets.js';
 import '@shopify/shopify-api/adapters/node';
 import {shopifyApi, LATEST_API_VERSION} from '@shopify/shopify-api';
 import redis from 'redis';
-import errorHandler from './middleware/errorHandler.js';
+import Constant from "./constants.js";
 
 /**
  * ChatBüdy project Nodejs + Express API
@@ -103,7 +103,56 @@ app.use('/password-update', passwordUpdateRoute);
 app.use('/shopify', shopifyRoute);
 
 // handle the error
-app.use(errorHandler);
+app.use((err, req, res, next) => {
+    if(res.headersSent){
+        return
+    }
+    const statusCode = err.statusCode ? err.statusCode : 500;
+
+    switch (statusCode) {
+        case Constant.VALIDATION_ERROR :
+            res.status(statusCode || 500).json({
+                title: err.title,
+                message: err.message,
+                stackTrace: err.stack
+            });
+            break;
+
+        case Constant.NOT_FOUND :
+            res.status(statusCode || 500).json({
+                title: err.title,
+                message: err.message,
+                stackTrace: err.stack
+            });
+            break;
+
+        case Constant.UNAUTHORIZED :
+            res.status(statusCode || 500).json({
+                title: err.title,
+                message: err.message,
+                stackTrace: err.stack
+            });
+            break;
+
+        case Constant.FORBIDDEN :
+            res.status(statusCode || 500).json({
+                title: err.title,
+                message: err.message,
+                stackTrace: err.stack
+            });
+            break;
+
+        case Constant.SERVER_ERROR :
+            res.status(statusCode || 500).json({
+                title: err.title,
+                message: err.message,
+                stackTrace: err.stack
+            });
+            break;
+        default:
+            break;
+    }
+});
 
 // Connect and start the server
 const server = app.listen(port, async() => {

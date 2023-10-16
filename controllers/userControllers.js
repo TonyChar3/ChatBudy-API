@@ -8,6 +8,9 @@ import { uniqueUserHash } from '../utils/manageVisitors.js';
 import { sendAdminSSEInfo } from '../utils/manageSSE.js';
 import { Parser } from 'json2csv';
 import { VerifyFirebaseToken } from '../middleware/authHandle.js';
+let custom_statusCode;
+let custom_err_message;
+let custom_err_title;
 
 //@desc Register a new User
 //@route POST /user/register
@@ -22,37 +25,40 @@ const registerUser = asyncHandler(async(req,res,next) => {
         // get the user data
         const firebase_user_data = await admin.auth().getUser(decode_token.user_id);
         if(!firebase_user_data){
-            res.status(404);
-            next();
+            custom_statusCode = 404;
+            custom_err_message = 'Firebase user data not found';
+            custom_err_title = 'NOT FOUND';
         }
         // generate a unique user hash
         const u_hash = await uniqueUserHash();
         if(!u_hash){
-            res.status(500);
-            next();
+            custom_statusCode = 500;
+            custom_err_message = 'Unable to generate a unique User hash';
+            custom_err_title = 'SERVER ERROR';
         }
         // TODO: Remove comment for production
         // sanitize the url and the username with regex
         if(!url_regex.test(web_url)){
-            res.status(500);
-            next();
+            custom_statusCode = 401;
+            custom_err_message = 'Invalid website url';
+            custom_err_title = 'UNAUTHORIZED';
         }
         if(!username_regex.test(username)){
-            res.status(500);
-            next();
+            custom_statusCode = 401;
+            custom_err_message = 'Invalid user name';
+            custom_err_title = 'UNAUTHORIZED';
         }
-
         // write to DB the new collection objects
         const [user, widget, visitor, chatroom] = await Promise.all([
             // create new User
-            await User.create({
+            User.create({
                 _id: firebase_user_data.uid,
                 user_access: u_hash,
                 username: username,
                 email: firebase_user_data.email
             }),
             // create new widget
-            await Widget.create({
+            Widget.create({
                 _id: u_hash,
                 domain: web_url,
                 customization: {
@@ -65,22 +71,48 @@ const registerUser = asyncHandler(async(req,res,next) => {
                 }
             }),
             // create Visitor collection object
-            await Visitors.create({
+            Visitors.create({
                 _id: u_hash
             }),
-            // create Chatroom collection object
-            await ChatRoom.create({
+            ChatRoom.create({
                 _id: u_hash
             })
         ]);
         if(!user || !widget || !visitor || !chatroom){
-            res.status(500);
-            next();
+            const error_variable = !user || !widget || !visitor || !chatroom
+            switch (error_variable){
+                case !user:
+                    custom_statusCode = 500;
+                    custom_err_message = 'Unable to create a new User';
+                    custom_err_title = 'SERVER ERROR';
+                    break;
+                case !widget:
+                    custom_statusCode = 500;
+                    custom_err_message = 'Unable to create a new Widget';
+                    custom_err_title = 'SERVER ERROR';
+                    break;
+                case !visitor:
+                    custom_statusCode = 500;
+                    custom_err_message = 'Unable to create a new Visitor collection';
+                    custom_err_title = 'SERVER ERROR';
+                    break;
+                case !chatroom:
+                    custom_statusCode = 500;
+                    custom_err_message = 'Unable to create a new Chatroom collection';
+                    custom_err_title = 'SERVER ERROR';
+                    break;
+                default:
+                    break;
+            }
         }
         res.status(200).json({ message: "Welcome to the Salezy App"});
     } catch(err){
-        console.log('ERROR registerUser()');
-        next(err);
+        next({ 
+            statusCode: custom_statusCode || 500, 
+            title: custom_err_title, 
+            message: custom_err_message, 
+            stack: err.stack 
+        });
     }
 });
 //@desc Update the user profile Username or Email
@@ -89,7 +121,6 @@ const registerUser = asyncHandler(async(req,res,next) => {
 const updateProfile = asyncHandler(async(req,res,next) => {
     // To gather every updates sent back
     const update_profile = {};
-
     try{
         const { new_name, new_email } = req.body
         // validate and decode the token
@@ -98,8 +129,9 @@ const updateProfile = asyncHandler(async(req,res,next) => {
         const user = await User.findById(decode_token.uid);
         // make sure it is found
         if(!user){
-            res.status(404);
-            next();
+            custom_statusCode = 404;
+            custom_err_title = 'NOT FOUND';
+            custom_err_message = 'User data not found';
         }
         if(new_name){ 
             // if a username is sent back
@@ -148,14 +180,19 @@ const updateProfile = asyncHandler(async(req,res,next) => {
                 });
             }
             if(!update){
-                res.status(500);
-                next();
+                custom_statusCode = 500;
+                custom_err_message = 'Unable to update profile data with new data';
+                custom_err_title = 'SERVER ERROR';
             }
             res.status(201).json({ message: "User Profile Updated" });
         }
     } catch(err){
-        console.log('ERROR updateProfile()');
-        next(err);
+        next({ 
+            statusCode: custom_statusCode || 500, 
+            title: custom_err_title, 
+            message: custom_err_message, 
+            stack: err.stack 
+        });
     }
 });
 //@desc Get the current logged in user data
@@ -168,19 +205,25 @@ const currentUser = asyncHandler(async(req,res,next) => {
         // get the user data
         const firebase_user_data = await admin.auth().getUser(decode_token.user_id);
         if(!firebase_user_data){
-            res.status(404);
-            next();
+            custom_statusCode = 404;
+            custom_err_message = 'Firebase user data not found';
+            custom_err_title = 'NOT FOUND';
         }
         //create the user and insert it in the DB
         const user = await User.findById(firebase_user_data.uid);
         if(!user){
-            res.status(404);
-            next();
+            custom_statusCode = 404;
+            custom_err_message = 'User data not found';
+            custom_err_title = 'NOT FOUND';
         } 
         res.status(200).json(user);
-    } catch(e){
-        console.log('ERROR currentUser()');
-        next(e);
+    } catch(err){
+        next({ 
+            statusCode: custom_statusCode || 500, 
+            title: custom_err_title, 
+            message: custom_err_message, 
+            stack: err.stack 
+        });
     }
 });
 //@desc delete the user account from the DB + Firebase
@@ -193,25 +236,56 @@ const deleteUserAccount = asyncHandler(async(req,res,next) => {
         // fetch and remove the User from the DB
         const user = await User.findById(decode_token.uid);
         if(!user){
-            res.status(404);
-            next();
+            custom_statusCode = 404;
+            custom_err_message = 'User data not found';
+            custom_err_title = 'NOT FOUND';
         }
         // remove the user from the db
-        await Promise.all([
-            await Visitors.deleteOne({ _id: user.user_access }),
-            await ChatRoom.deleteOne({ _id: user.user_access }),
-            await Widget.deleteOne({ _id: user.user_access })
+        const [visitor, chatroom, widget] = await Promise.all([
+            Visitors.deleteOne({ _id: user.user_access }),
+            ChatRoom.deleteOne({ _id: user.user_access }),
+            Widget.deleteOne({ _id: user.user_access })
         ]);
         // remove it from firebase
-        await Promise.all([
-            await User.deleteOne({ _id: decode_token.uid }),
-            await admin.auth().deleteUser(decode_token.uid)
+        const [delete_user] = await Promise.all([
+            User.deleteOne({ _id: decode_token.uid })
         ]);
+        if(!visitor || !chatroom || !widget || !delete_user){
+            const error_variable = !visitor || !chatroom || !widget || !delete_user;
+            switch (error_variable){
+                case !visitor:
+                    custom_statusCode = 500;
+                    custom_err_message = 'Unable to delete the user visitor collection data';
+                    custom_err_title = 'SERVER ERROR';
+                    break;
+                case !chatroom:
+                    custom_statusCode = 500;
+                    custom_err_message = 'Unable to delete the user chatroom collection data';
+                    custom_err_title = 'SERVER ERROR';
+                    break;
+                case !widget:
+                    custom_statusCode = 500;
+                    custom_err_message = 'Unable to delete the user widget data';
+                    custom_err_title = 'SERVER ERROR';
+                    break;
+                case !delete_user:
+                    custom_statusCode = 500;
+                    custom_err_message = 'Unable to delete the user data';
+                    custom_err_title = 'SERVER ERROR';
+                    break;
+                default:
+                    break;
+            }
+        }
         // send back success
         res.status(201).send({ user_deleted: true });
     } catch(err){
-        console.log('ERROR DeleteUserAccount()');
-        next(err);
+        next({ 
+            statusCode: custom_statusCode || 500, 
+            title: custom_err_title, 
+            message: custom_err_message, 
+            stack: err.stack 
+        });
     }
 })
 //@desc CLEAR the user notification array
@@ -223,8 +297,9 @@ const clearNotifications = asyncHandler(async(req,res,next) => {
         const decode_token = await VerifyFirebaseToken(req, res);
         const user = await User.findById(decode_token.uid);
         if(!user){
-            res.status(404);
-            next();
+            custom_statusCode = 404;
+            custom_err_message = 'User data not found';
+            custom_err_title = 'NOT FOUND';
         }
         // access his notification array and clear it
         user.notification = [];
@@ -233,8 +308,12 @@ const clearNotifications = asyncHandler(async(req,res,next) => {
         // return a positive response back from the server
         res.status(201).send({ message: 'Notifications cleared' });
     } catch(err){
-        console.log('ERROR clearNotifications()');
-        next(err);
+        next({ 
+            statusCode: custom_statusCode || 500, 
+            title: custom_err_title, 
+            message: custom_err_message, 
+            stack: err.stack 
+        });
     }
 });
 //@desc Clean up the seen notifications by the user
@@ -249,8 +328,9 @@ const cleanUpNotifications = asyncHandler(async(req,res,next) => {
         // find the user
         const user = await User.findById(decode_token.uid)
         if(!user){
-            res.status(404);
-            next();
+            custom_statusCode = 404;
+            custom_err_message = 'User data not found';
+            custom_err_title = 'NOT FOUND';
         }
         // filter the user notification array with the seen notif array
         const updatedNotifications = user.notification.filter(notif => !notif_array.includes(notif._id.toString()));
@@ -262,12 +342,17 @@ const cleanUpNotifications = asyncHandler(async(req,res,next) => {
             // return a positive response back from the server
             res.status(201).send({ message: 'Notifications cleaned up' });
         } else {
-            res.status(500);
-            next();
+            custom_statusCode = 500;
+            custom_err_message = 'Unable to save the cleaned up notifications';
+            custom_err_title = 'SERVER ERROR';
         }
     } catch(err){
-        console.log('ERROR cleanUpNotifications()');
-        next(err);
+        next({ 
+            statusCode: custom_statusCode || 500, 
+            title: custom_err_title, 
+            message: custom_err_message, 
+            stack: err.stack 
+        });
     }
 });
 //@desc Get a CSV file of the user visitor list
@@ -280,14 +365,16 @@ const getVisitorListCSV = asyncHandler(async(req,res,next) => {
         // use the UID to find the user
         const current_user = await User.findById(decode_token.uid);
         if(!current_user){
-            res.status(404);
-            next();
+            custom_statusCode = 404;
+            custom_err_message = 'User data not found';
+            custom_err_title = 'NOT FOUND';
         }
         // use the User access hash to get the visitor list from the visitor collection
         const visitors = await Visitors.findById(current_user.user_access);
         if(!visitors){
-            res.status(404);
-            next();
+            custom_statusCode = 404;
+            custom_err_message = 'Visitor data not found';
+            custom_err_title = 'NOT FOUND';
         }
         // defines the CSV fields
         const fields = ['email', 'country'];
@@ -296,15 +383,20 @@ const getVisitorListCSV = asyncHandler(async(req,res,next) => {
         const csv = json2csvParser.parse(visitors.visitor)
         // return it as download
         if(!csv){
-            res.status(500);
-            next();
+            custom_statusCode = 500;
+            custom_err_message = 'Failed to generate a .csv file';
+            custom_err_title = 'SERVER ERROR';
         } 
         res.header('Content-Type', 'text/csv');
         res.attachment('visitors.csv');
         res.send(csv);  
     } catch(err){
-        console.log('ERROR getVisitorListCSV()');
-        next(err);
+        next({ 
+            statusCode: custom_statusCode || 500, 
+            title: custom_err_title, 
+            message: custom_err_message, 
+            stack: err.stack 
+        });
     }
 });
 

@@ -20,6 +20,10 @@ const PUB_KEY = fs.readFileSync(pathToPubKey, 'utf8');
 const WS_PUB_KEY = fs.readFileSync(pathToWSPubKey, 'utf8');
 const WS_PRIV_KEY = fs.readFileSync(pathToWSPrivKey, 'utf8');
 
+let custom_statusCode = 0;
+let custom_err_message = '';
+let custom_err_title = '';
+
 /**
  * Generate a random identifier for a visitor
  */
@@ -34,6 +38,7 @@ const generateRandomID = () => {
  * Make sure there's no duplicate hash for the User
  */
 const uniqueUserHash = async() => {
+  try{
     // generate the random id
     let user_hash;
     // flag for the uid duplicate check
@@ -49,6 +54,14 @@ const uniqueUserHash = async() => {
             return user_hash;
         }
     } while (hash_flag === true);
+  } catch(err){
+    throw Error(JSON.stringify({
+        status: 404,
+        title: 'NOT FOUND',
+        message: 'User data not found',
+        stack: err.stack
+    }));
+  }
 }
 /**
 * Visitor unique Identifier generator
@@ -58,25 +71,31 @@ const uniqueVisitorID = async(array_id) => {
     let visitor_uid;
     // flag for the uid duplicate check
     let uid_flag = true
-    // find the visitor array
-    const visitor_array = await Visitor.findById(array_id);
-    if(!visitor_array){
-        throw new Error("ERROR uniqueVisitorID(): The visitor array to modified wasn't found...please try again");
+    try{
+      // find the visitor array
+      const visitor_array = await Visitor.findById(array_id);
+      // do ... while
+      do {
+          // generate the ID
+          visitor_uid = generateRandomID();
+          
+          const check_duplicate = visitor_array.visitor.findIndex(visitor => visitor._id.toString() === visitor_uid.toString());
+          
+          if(check_duplicate !== -1){
+              uid_flag = true;
+          } else if(check_duplicate === -1){
+              uid_flag = false
+          }
+      } while (uid_flag === true); 
+      return visitor_uid;
+    } catch(err){
+      throw Error(JSON.stringify({
+        status: 404,
+        title: 'NOT FOUND',
+        message: 'Visitor data not found',
+        stack: err.stack
+      }));
     }
-    // do ... while
-    do {
-        // generate the ID
-        visitor_uid = generateRandomID();
-        
-        const check_duplicate = visitor_array.visitor.findIndex(visitor => visitor._id.toString() === visitor_uid.toString());
-        
-        if(check_duplicate !== -1){
-            uid_flag = true;
-        } else if(check_duplicate === -1){
-            uid_flag = false
-        }
-    } while (uid_flag === true); 
-    return visitor_uid;
 }
 /**
  * Get the visitor specific browser
@@ -154,8 +173,12 @@ const generateJWT = (visitor_id, user_hash, login_user) => {
       }
     }
   } catch(err){
-    console.log('ERROR generateJWT()');
-    throw new Error(`ERROR generateJWt(): ${err}`);
+    throw Error(JSON.stringify({
+      status: 500,
+      title: 'SERVER ERROR',
+      message: 'Unable to generate a new JWT token',
+      stack: err.stack
+  }));
   }
 }
 /**
@@ -187,30 +210,41 @@ const decodeJWT = async(token, type_name) => {
  * Set the visitor email section
  */
 const setVisitorEmail = async(user_hash, visitor_id, email) => {
+
   try{
     // find user visitor collection
     const visitor_collection = await Visitor.findById(user_hash);
     if(!visitor_collection){
-      throw new Error("ERROR setVisitorEmail(): Unable to find the visitor to set the email");
+      custom_statusCode = 404;
+      custom_err_message = 'Visitor data not found';
+      custom_err_title = 'NOT FOUND';
     }
     // get the visitor object index in the user visitor array
     const visitor_index = visitor_collection.visitor.findIndex(visitor => visitor._id.toString() === visitor_id.toString());
     if(visitor_index === -1){
-      throw new Error("ERROR setVisitorEmail(): Unable to find the visitor index to set the email...");
+      custom_statusCode = 404;
+      custom_err_message = 'Visitor not found';
+      custom_err_title = 'NOT FOUND';
     } 
     // set the new field
     visitor_collection.visitor[visitor_index].email = email;
     // save it
     const save_updates = await visitor_collection.save();
     if(!save_updates){
-      throw new Error('ERROR setVisitorEmail(): unable to save the updated visitor');
+      custom_statusCode = 500;
+      custom_err_message = 'Unable to save new updated Visitor data';
+      custom_err_title = 'SERVER ERROR';
     }
     // send new info to the admin panel
     sendAdminFreshUpdatedInfo(user_hash, visitor_collection.visitor);
     return true;
   } catch(err){
-    console.log('ERROR setVisitorEmail()');
-    throw new Error(`ERROR setVisitorEmail(): ${err}`);
+    throw Error(JSON.stringify({
+      status: custom_statusCode || 500,
+      title: custom_err_title || 'SERVER FOUND',
+      message: custom_err_message || 'Unable to set a new email',
+      stack: err.stack
+    }));
   }
 }
 /**
@@ -232,15 +266,16 @@ const checkRequestCache = async(redis_client, obj_email) => {
       }
     } else if (count <= 3){
       const increment_count = count += 1
-      const new_count = await redis_client.set(obj_email, JSON.stringify(increment_count), "EX", 86400);
-      if(!new_count){
-        throw new Error('ERRPR checkRequestCache(): Unable to set a new cached email.');
-      }
+      await redis_client.set(obj_email, JSON.stringify(increment_count), "EX", 86400);
       return true
     }
   } catch(err){
-    console.log('ERROR checkRequestCache()');
-    throw new Error(`ERROR checkRequestCache(): ${err}`);
+    throw Error(JSON.stringify({
+      status: 500,
+      title: 'SERVER FOUND',
+      message: 'Nothing found during cache check',
+      stack: err.stack
+    }));
   }
 }
 /**
@@ -262,8 +297,12 @@ const visitorSSEAuth = async(req) => {
       }
       return decoded
   } catch(err){
-    console.log('ERROR visitorSSEAuth()');
-    throw new Error(`ERROR visitorSSEAuth(): ${err}`);
+    throw Error(JSON.stringify({
+      status: custom_statusCode || 500,
+      title: custom_err_title || 'SERVER FOUND',
+      message: custom_err_message || 'Unable to set a new email',
+      stack: err.stack
+    }));
   }
 }
 /**
@@ -360,6 +399,7 @@ const setVisitorData = async(visitor_collection) => {
 
   } catch(err){
     console.log('ERROR setVisitorData()', err);
+    return
   }
 }
 

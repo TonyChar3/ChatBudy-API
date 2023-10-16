@@ -7,22 +7,26 @@ import { VerifyFirebaseToken } from '../middleware/authHandle.js';
 import queryString from 'query-string';
 import crypto from 'crypto';
 import axios from 'axios';
-
 dotenv.config()
+
+let custom_statusCode;
+let custom_err_message;
+let custom_err_title;
 
 //@desc test route to get a feel of the shopify api
 //@route POST /shopify/auth
 //@access PRIVATE
 const shopifyAuth = asyncHandler( async(req, res, next) => {
+    // verify firebase auth token
+    await VerifyFirebaseToken(req,res);
     try{
         const { shop_name } = req.body
-        await VerifyFirebaseToken(req,res);
         // verify the shopify domain name
         const verified_shop_name = verifyShopifyDomain(shop_name);
         if(!verified_shop_name){
-            // send back a error msg to the front-end
-            res.status(401).send({ domain_error: true });
-            next();
+            custom_statusCode = 401;
+            custom_err_message = 'Invalid shopify domain url';
+            custom_err_title = 'UNAUTHORIZED';
         } else {
             const apiKey = process.env.SHOPIFY_PUBLIC
             const redirectUri = process.env.HOST_NAME + '/shopify/callback'
@@ -33,8 +37,12 @@ const shopifyAuth = asyncHandler( async(req, res, next) => {
             res.send(authUrl);
         }
     } catch(err){
-        console.log('Shopify ')
-        next(err)
+        next({ 
+            statusCode: custom_statusCode || 500, 
+            title: custom_err_title || 'SERVER ERROR', 
+            message: custom_err_message, 
+            stack: err.stack 
+        });
     }
 });
 //@desc route to build the shopify app install and redirect the user to install
@@ -45,8 +53,15 @@ const shopifyCallback = asyncHandler(async(req,res,next) => {
         const stateCookie = await redis_nonce_storage.get(`nonce:${state}`)
      
         if (state !== stateCookie) {
-            res.status(403).send('Request origin cannot be verified');
-            next();
+            custom_statusCode = 403;
+            custom_err_message = 'Reuqest origin cannot be verified';
+            custom_err_title = 'FORBIDDEN';
+            next({ 
+                statusCode: custom_statusCode || 500, 
+                title: custom_err_title || 'SERVER ERROR', 
+                message: custom_err_message, 
+                stack: err.stack 
+            });
         }
      
         if (shop && hmac && code) {
@@ -65,8 +80,15 @@ const shopifyCallback = asyncHandler(async(req,res,next) => {
             };
          
             if (!hashEquals) {
-                res.status(400)
-                next('HMAC validation failed');
+                custom_statusCode = 400;
+                custom_err_message = 'HMAC validation failed';
+                custom_err_title = 'VALIDATION ERROR';
+                next({ 
+                    statusCode: custom_statusCode || 500, 
+                    title: custom_err_title || 'SERVER ERROR', 
+                    message: custom_err_message, 
+                    stack: err.stack 
+                });
             }
             const accessTokenRequestUrl = `https://${shop}/admin/oauth/access_token?client_id=${process.env.SHOPIFY_PUBLIC}&client_secret=${process.env.SHOPIFY_PRIVATE}&code=${code}`;
             const accessTokenPayload = {
@@ -92,19 +114,35 @@ const shopifyCallback = asyncHandler(async(req,res,next) => {
                 .then(() => {
                     res.redirect(`https://${shop}/admin/themes/current/editor?context=apps&template=product&activateAppId=${process.env.SHOPIFY_APP_ID}`);
                 })
-                .catch((error) => {
-                    res.status(500);
-                    next(error);
+                .catch(() => {
+                    custom_err_message = 'Unable to redirect to url';
+                    custom_err_title = 'SERVER ERROR'
+                    next({ 
+                        statusCode: custom_statusCode || 500, 
+                        title: custom_err_title || 'SERVER ERROR', 
+                        message: custom_err_message, 
+                        stack: err.stack 
+                    });
                 });
             }) 
-            .catch((error) => {
-                res.status(500);
-                next(error);
+            .catch(() => {
+                custom_err_message = 'Invalid shopify accessToken';
+                custom_err_title = 'SERVER ERROR'
+                next({ 
+                    statusCode: custom_statusCode || 500, 
+                    title: custom_err_title || 'SERVER ERROR', 
+                    message: custom_err_message, 
+                    stack: err.stack 
+                });
             });
   
         } else {
-            res.status(400).send('Required parameters missing');
-            next();
+            next({ 
+                statusCode: custom_statusCode || 500, 
+                title: custom_err_title || 'SERVER ERROR', 
+                message: custom_err_message, 
+                stack: err.stack 
+            });
         }
 })
 

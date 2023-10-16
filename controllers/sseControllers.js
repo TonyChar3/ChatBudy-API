@@ -1,9 +1,10 @@
 import asyncHandler from 'express-async-handler';
 import { fetchAllAdminVisitor, fetchAllAdminNotification, fetchAdminAnalyticsData } from '../utils/manageSSE.js';
 import { VerifyFirebaseToken } from '../middleware/authHandle.js';
-
 const connections = new Map()
 let connectedUser;
+let custom_err_message;
+let custom_err_title;
 
 //@desc Route grant access to the SSE connection
 //@route GET /connection/auth-sse
@@ -11,20 +12,24 @@ let connectedUser;
 const authSSEconnection = asyncHandler(async(req,res,next) => {
     try{
         const decodeToken = await VerifyFirebaseToken(req, res);
-        if(!decodeToken) {
-            res.status(401);
-            next(err);
-        }
         const userID = decodeToken.uid
         const token = req.headers.authorization.split(' ')[1];
+        if(!token){
+            custom_err_message = 'Authorization headers not set';
+            custom_err_title = 'SERVER ERROR'
+        }
         connectedUser = {
             id: userID,
             accessToken: token
         }
         res.status(201).json({ message: "SSE connection granted"});
     } catch(err){
-        console.log('ERROR AuthSSEconnection()');
-        next(err);
+        next({ 
+            statusCode: 500, 
+            title: custom_err_title || 'SERVER ERROR', 
+            message: custom_err_message, 
+            stack: err.stack 
+        });
     }
 });
 //@desc Route to initiate the SSE connection
@@ -46,7 +51,7 @@ const connectionSSE = asyncHandler(async(req,res,next) => {
             fetchAdminAnalyticsData(connectedUser);
             
             res.on("error", (error) => {
-                next(error)
+                custom_err_message = error.message;
                 connections.delete(connectedUser.id);
             });
                 
@@ -55,10 +60,13 @@ const connectionSSE = asyncHandler(async(req,res,next) => {
             });
         }
     } catch(err){
-        console.log('ERROR SSEconnection()');
-        next(err);
+        next({ 
+            statusCode: 500, 
+            title: custom_err_title || 'SERVER ERROR', 
+            message: custom_err_message, 
+            stack: err.stack 
+        });
     }
 });
-
 
 export { connectionSSE, authSSEconnection, connections }

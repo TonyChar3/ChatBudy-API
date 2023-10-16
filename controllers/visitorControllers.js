@@ -2,14 +2,17 @@ import asyncHandler from 'express-async-handler';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import { getVisitorBrowser, generateJWT, generateRandomID, setBrowserData, setVisitorData } from '../utils/manageVisitors.js';
+import { VerifyUserHash } from '../middleware/authHandle.js';
 import { sendWsUserNotification } from '../utils/manageChatRoom.js';
 import Visitor from '../models/visitorsModels.js';
 import Chatroom from '../models/chatRoomModels.js';
 import User from '../models/userModels.js';
 import { sendAdminSSEInfo } from '../utils/manageSSE.js';
 import { redis_chatroom } from '../server.js';
-
 dotenv.config();
+let custom_statusCode;
+let custom_err_message;
+let custom_err_title;
 
 //@desc To get the visitor info
 //@route GET /visitor/visitor-info
@@ -19,53 +22,93 @@ const visitorInfoFetch = asyncHandler( async(req,res,next) => {
         const api_key = process.env.GEO_KEY
         const response = await fetch(`https://api.geoapify.com/v1/ipinfo?&apiKey=${api_key}`);
         if(!response) {
-            res.status(500);
+            custom_statusCode = 404;
+            custom_err_title = 'NOT FOUND';
+            custom_err_message = 'Visitor info data not found';
         } 
         const data =  await response.json();
         res.json({ info: data });
     } catch(err) {
-        console.log(err);
-        next(err);
+        next({ 
+            statusCode: custom_statusCode || 500, 
+            title: custom_err_title, 
+            message: custom_err_message, 
+            stack: err.stack 
+        });
     }
 });
 //@desc Route to create a new visitor
 //@route POST /visitor/new-visitor
 //@access PRIVATE
 const createVisitor = asyncHandler(async(req,res,next) => {
+    // verify the user hash
+    VerifyUserHash(req,res);
     try{
         const { isoCode, browser } = req.body;
-        const user_hash = req.params.id
-        
         const visitor_uid = generateRandomID(user_hash);
-        const [visitor, visitor_browser, user] = await Promise.all([
+        const visitor_browser = getVisitorBrowser(browser);
+        const [visitor, user] = await Promise.all([
             Visitor.findById(user_hash),
-            getVisitorBrowser(browser),
             User.findOne({ user_access: user_hash })
         ]);
         if(!visitor || !visitor_browser || !visitor_uid || !user){
-            res.status(500);
+            const error_variable = !visitor || !visitor_browser || !visitor_uid || !user;
+            switch (error_variable){
+                case !visitor:
+                    custom_statusCode = 404;
+                    custom_err_message = 'Visitor data not found';
+                    custom_err_title = 'NOT FOUND';
+                    break;
+                case !visitor_browser:
+                    custom_statusCode = 404;
+                    custom_err_message = 'Visitor browser not set correctly';
+                    custom_err_title = 'NOT FOUND';
+                    break;
+                case !visitor_uid:
+                    custom_statusCode = 500;
+                    custom_err_message = 'Unable to set a unique UID for the visitor';
+                    custom_err_title = 'SERVER ERROR';
+                    break;
+                case !user:
+                    custom_statusCode = 404;
+                    custom_err_message = 'User data not found';
+                    custom_err_title = 'NOT FOUND';
+                default:
+                    break;
+            }
         }
         // increment visitorData count
         setVisitorData(visitor);
         // increment browserData count
         setBrowserData(visitor_browser.name, visitor);
-        await visitor.save();
+        const analytics_data = await visitor.save();
+        if(!analytics_data){
+            custom_statusCode = 500;
+            custom_err_message = 'Unable to save updated analytics data';
+            custom_err_title = 'SERVER ERROR';
+        }
         // create a new visitor 
         const add_visitor = await visitor.updateOne({
             $push: {
-                visitor: {
+              visitor: {
+                $each: [
+                  {
                     _id: visitor_uid,
                     country: isoCode,
                     browser: visitor_browser.name
-                }
+                  }
+                ],
+                $position: 0
+              }
             }
         });
         if(!add_visitor){
-            res.status(500);
-            throw new Error('Unable to add new visitor to DB');
+            custom_statusCode = 500;
+            custom_err_message = 'Unable to save the new visitor';
+            custom_err_title = 'SERVER ERROR';
         }
         // push the new object to the array
-        visitor.visitor.push({
+        visitor.visitor.unshift({
             _id: visitor_uid,
             country: isoCode,
             browser: visitor_browser.name
@@ -74,58 +117,87 @@ const createVisitor = asyncHandler(async(req,res,next) => {
         sendAdminSSEInfo('visitor', user._id, visitor.visitor)
         // notify the user
         sendWsUserNotification("admin", user_hash, visitor_uid, { sent_from: "Admin", title: "New visitor", content: `${visitor_uid} is visiting` });
-
+        // generate a new JWT token for the visitor
         const generate_token = generateJWT(visitor_uid);
         if(!generate_token){
-            res.status(500);
-            throw new Error('Unable to generate JWT for visitor...please try again')
+            custom_statusCode = 500;
+            custom_err_message = 'Unable to generate a new visitor auth token';
+            custom_err_title = 'SERVER ERROR';
         }
         // TODO: Uncomment this for production
         // res.cookie('visitor_jwt', generate_token, { maxAge: 48 * 60 * 60 * 1000, httpOnly:false, sameSite: false })
         res.send({ visitorToken: generate_token });
     } catch(err) {
-        console.log(err);
-        next(err);
+        next({ 
+            statusCode: custom_statusCode || 500, 
+            title: custom_err_title, 
+            message: custom_err_message, 
+            stack: err.stack 
+        });
     }
 });
 //@desc Route to delete a specific visitor along with the chatroom
 //@route DELETE /visitor/delete-visitor
 //@access PRIVATE
 const deleteVisitor = asyncHandler( async(req,res,next) => {
+    // verify the user hash
+    VerifyUserHash(req,res);
     try{
         // will need the user hash + the visitor _id
-        const { u_hash, visitor_id } = req.body;
+        const { user_hash, visitor_id } = req.body;
         // find the user
-        const user = await User.findOne({ user_access: u_hash });
-
+        const user = await User.findOne({ user_access: user_hash });
         const [visitor_collection, chatroom_collection] = await Promise.all([
             //find the visitor collection
-            await Visitor.findById(u_hash),
+            Visitor.findById(user_hash),
             // find the chatroom collection
-            await Chatroom.findById(u_hash)
+            Chatroom.findById(user_hash)
         ]);
-        if(!visitor_collection || !user || !chatroom_collection){
-            res.status(500);
+        switch (!visitor_collection || !user || !chatroom_collection){
+            case !visitor_collection:
+                custom_statusCode = 400;
+                custom_err_message = 'Visitor data not found';
+                custom_err_title = 'NOT FOUND';
+                break;
+            case !user:
+                custom_statusCode = 404;
+                custom_err_message = 'User data not found';
+                custom_err_title = 'NOT FOUND';
+                break;
+            case !chatroom_collection:
+                custom_statusCode = 404;
+                custom_err_message = 'Chatroom data not found';
+                custom_err_title = 'NOT FOUND';
+                break;
+            default:
+                break;
         }
         // loop through the visitor array and check for the matching _id
         const visitor_index = visitor_collection.visitor.findIndex(visitr => visitr._id.toString() === visitor_id.toString());
         //loop through his chatrooms to find the room
         const chatroom_index = chatroom_collection.chat_rooms.findIndex(rooms => rooms.visitor.toString() === visitor_id.toString());
         if(visitor_index === -1 || chatroom_index === -1){
-            res.status(404);
+            custom_statusCode = 404;
+            custom_err_message = `${visitor_index === -1? 'Visitor not found' : 'Chatroom not found'}`;
+            custom_err_title = 'NOT FOUND';
         }
         visitor_collection.visitor.splice(visitor_index, 1);
         chatroom_collection.chat_rooms.splice(chatroom_index,1);
         // save everything
         await Promise.all([
-            await redis_chatroom.del(visitor_id),
-            await visitor_collection.save(),
-            await chatroom_collection.save()
+            redis_chatroom.del(visitor_id),
+            visitor_collection.save(),
+            chatroom_collection.save()
         ]);
         sendAdminSSEInfo('visitor', user._id, visitor_collection.visitor);
         res.status(200).json({ message: "Visitor removed" });
     } catch(err){   
-        next(err);
+        next({ 
+            statusCode: custom_statusCode || 500, 
+            title: custom_err_title, 
+            message: custom_err_message, 
+            stack: err.stack 
+        });
     }
 });
 

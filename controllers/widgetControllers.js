@@ -6,29 +6,31 @@ import { widgetInstallStatus } from '../utils/manageSSE.js';
 import { VerifyFirebaseToken, VerifyUserHash } from '../middleware/authHandle.js';
 import dotenv from 'dotenv';
 import axios from 'axios';
-
 dotenv.config();
 const sse_connections = new Map()
 let connect_sse = null;
+let custom_statusCode;
+let custom_err_message;
+let custom_err_title;
 
 //@desc To get the widget
 //@route GET /code/:userhash.js
 //@access PRIVATE
 const initializeWidgetTemplate = asyncHandler( async(req,res,next) => {
+    let userhash;
+    // verify if the user hash is still ok
+    const verify_user_access = await VerifyUserHash(req,res);
     try{
-        // take the user hash and fetch the widget collection
-        const { userhash } = req.params
-        // verify if the user hash is still ok
-        const verify_user_access = await VerifyUserHash(userhash);
-        if(!verify_user_access){
-            res.status(404);
-            next();
+        if(verify_user_access){
+            const { user_hash } = req.body;
+            userhash = user_hash;
         }
         // get the loader script
         const response = await axios.get(process.env.WIDGET_TEMPLATE_URL)
         if(!response){
-            res.status(500);
-            next();
+            custom_statusCode = 404;
+            custom_err_message = 'Widget template not found';
+            custom_err_title = 'NOT FOUND';
         }
         // set installed to true
         widgetInstallStatus(userhash, true);
@@ -38,8 +40,12 @@ const initializeWidgetTemplate = asyncHandler( async(req,res,next) => {
         res.setHeader('Content-Type', 'application/javascript')
         res.send(scriptContent);
     } catch(err) {
-        console.log('ERROR initializing the widget');
-        next(err);
+        next({ 
+            statusCode: custom_statusCode || 500, 
+            title: custom_err_title, 
+            message: custom_err_message, 
+            stack: err.stack 
+        });
     }
 });
 //@desc To give the script tag link to correct user
@@ -49,20 +55,21 @@ const widgetCustomLink = asyncHandler(async(req,res,next) => {
     try{
         // verify + decode Firebase token 
         const decode_token = await VerifyFirebaseToken(req, res);
-        if(!decode_token){
-            res.status(500);
-            next();
-        }
         const user = await User.findById(decode_token.user_id);
         if(!user){
-            res.status(500);
-            next();
+            custom_statusCode = 404;
+            custom_err_message = 'User data not found';
+            custom_err_title = 'NOT FOUND';
         }
         res.status(200).json({ link: `<script type="module" src="http://localhost:8080/code/${user.user_access}" async></script>`})
 
     } catch(err){
-        console.log('ERROR WidgecustomLink()');
-        next(err)
+        next({ 
+            statusCode: custom_statusCode || 500, 
+            title: custom_err_title, 
+            message: custom_err_message, 
+            stack: err.stack 
+        });
     }
 });
 //@desc auth for the widget SSE connection
@@ -70,19 +77,19 @@ const widgetCustomLink = asyncHandler(async(req,res,next) => {
 //@access PRIVATE
 const widgetSSEAuth = asyncHandler( async(req,res,next) => {
     try{
-        // get the user access
-        const { user_access } = req.body
         // verify the hash
-        const verify_user_hash = VerifyUserHash(user_access);
+        const verify_user_hash = VerifyUserHash(req,res);
         if(!verify_user_hash){
-            res.status(401);
-            next();
+            custom_statusCode = 401;
+            custom_err_message = 'Invalid User hash';
+            custom_err_title = 'UNAUTHORIZED';
         }
         // authenticate the visitor before setting up the SSE connection
         const auth_visitor = await visitorSSEAuth(req);
         if(!Object.keys(auth_visitor).length === 0){
-            res.status(401);
-            next();
+            custom_statusCode = 401;
+            custom_err_message = 'Invalid token';
+            custom_err_title = 'UNAUTHORIZED';
         }
         connect_sse = {
             id: auth_visitor.id,
@@ -90,13 +97,18 @@ const widgetSSEAuth = asyncHandler( async(req,res,next) => {
         }
         res.status(201).json({ sse_link: process.env.WIDGET_SSE_CONNECTION_LINK });
     } catch(err){
-        console.log('ERROR widgetSSEAuth()');
-        next(err);
+        next({ 
+            statusCode: custom_statusCode || 500, 
+            title: custom_err_title, 
+            message: custom_err_message, 
+            stack: err.stack 
+        });
     }
 });
 //@desc auth and set up an SSE connection for the widget notification
 //@route GET /code/sse-connection
 //@access PRIVATE
+// TODO: Add a dynamic Access-Control-Allow-Origin domain for production
 const widgetSSEConnection = asyncHandler(async(req,res,next) => {
     try{
         if(connect_sse){
@@ -111,7 +123,7 @@ const widgetSSEConnection = asyncHandler(async(req,res,next) => {
             sendVisitorNotification(connect_sse.user_access, connect_sse.id);
             // clean up if the connection is closed or if an error occurs
             res.on("error", (error) => {
-                next(error);
+                custom_err_message = `${error.message}`
                 sse_connections.delete(connect_sse.id);// delete the connected user
             });
                 
@@ -123,8 +135,12 @@ const widgetSSEConnection = asyncHandler(async(req,res,next) => {
             });
         }
     } catch(err){
-        console.log('ERROR widgetSSEConnection()');
-        next(err);
+        next({ 
+            statusCode: custom_statusCode || 500, 
+            title: custom_err_title || 'Server Error', 
+            message: custom_err_message || '', 
+            stack: err.stack 
+        });
     }
 });
 //@desc to get the customization object for the widget
@@ -132,25 +148,24 @@ const widgetSSEConnection = asyncHandler(async(req,res,next) => {
 //@access PUBLIC
 const widgetStyling = asyncHandler(async(req,res,next) => {
     try{
-        // get the user_hash from the
-        const { userhash } = req.params
         // verify user hash
-        const verify_user_hash = VerifyUserHash(userhash);
+        const verify_user_hash = VerifyUserHash(req,res);
         if(!verify_user_hash){
-            res.status(401);
-            next();
+            custom_err_message = 'User hash is not valid';
+            custom_err_title = 'UNAUTHORIZED';
         }
+        // get the user_hash
+        const { user_hash } = req.params;
         // fetch the correct widget
-        const widget_collection = await Widget.findById(userhash);
+        const widget_collection = await Widget.findById(user_hash);
         if(!widget_collection){
-            res.status(404);
-            next();
+            custom_err_message = 'User widget data not found';
+            custom_err_title = 'NOT FOUND';
         }
         // send the object back to the  front-end
         res.status(200).send({ widget_style: widget_collection.customization });
     } catch(err){
-        console.log('ERROR widgetStyling()');
-        next(err);
+        next({ statusCode: 500, title: custom_err_title, message: custom_err_message, stack: err.stack });
     }
 });
 //@desc to save the updated customization for the widget
@@ -175,16 +190,14 @@ const saveWidgetStyling = asyncHandler(async(req,res,next) => {
             {new:true}
         );
         if(!update_widget){
-            res.status(500);
-            next();
+            custom_statusCode = 500;
+            custom_err_message = 'Unable to update the widget style';
+            custom_err_title = 'SERVER ERROR';
         }
         res.status(200).json({ message: "Widget updated" });
     } catch(err){
-        console.log('ERROR saveWidgetStyling()');
-        next(err);
+        next({ statusCode: custom_statusCode || 500, title: custom_err_title || 'SERVER ERROR', message: custom_err_message, stack: err.stack });
     }
 });
-
-
 
 export { initializeWidgetTemplate, widgetCustomLink, widgetSSEAuth, widgetSSEConnection, widgetStyling, saveWidgetStyling, sse_connections }

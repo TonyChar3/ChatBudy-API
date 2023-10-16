@@ -5,6 +5,10 @@ import admin from 'firebase-admin';
 import Visitors from '../models/visitorsModels.js';
 import ChatRoom from '../models/chatRoomModels.js';
 
+let custom_statusCode = '';
+let custom_err_message = '';
+let custom_err_title = '';
+
 /**
  * Function to update the visitors info safely
  *  when the visitor submits a new email or not
@@ -13,13 +17,19 @@ const sendAdminFreshUpdatedInfo = async(user_hash, data) => {
     try{
         const user = await User.findOne({ user_access: user_hash });
         if(!user){
-            throw new Error("ERROR sendAdminFreshUpdateInfo(): Send update info function ERROR: unable to find the user with the provided user hash");
+            custom_statusCode = 404;
+            custom_err_message = 'User data not found';
+            custom_err_title = 'NOT FOUND';
         }
         // send info to the front-end
         sendAdminSSEInfo('visitor', user._id, data);
     } catch(err){
-        console.log('ERROR sendAdminFreshUpdatedInfo()');
-        throw new Error(`ERROR sendAdminFreshUpdatedInfo(): ${err}`);
+        throw Error(JSON.stringify({
+            status: custom_statusCode || 500,
+            title: custom_err_title || 'SERVER ERROR',
+            message: custom_err_message || 'Unable to save chat to the DB',
+            stack: err.stack
+        }));
     }
 }
 /**
@@ -55,15 +65,21 @@ const fetchAllAdminVisitor = async(connected_user) => {
         if(connected_user){
             const decode_token = await admin.auth().verifyIdToken(connected_user.accessToken);
             if(!decode_token){
-                throw new Error('ERROR fetchAllAdminVisitor(): Unauthorized');
+                custom_statusCode = 401;
+                custom_err_message = 'Invalid auth token';
+                custom_err_title = 'UNAUTHORIZED';
             }
             const user = await User.findById(decode_token.uid);
             if(!user){
-                throw new Error("Unable to find your visitor array...please reload and try again");
+                custom_statusCode = 404;
+                custom_err_message = 'User data not found';
+                custom_err_title = 'NOT FOUND';
             }
             const visitor_collection = await Visitors.findById(user.user_access);
             if(!visitor_collection) {
-                throw new Error("Unable to find your visitor array...please reload and try again");
+                custom_statusCode = 404;
+                custom_err_message = 'Visitor data not found';
+                custom_err_title = 'NOT FOUND';
             }
             if(!visitor_collection.visitor.length > 0){
                 sendAdminSSEInfo('visitor', user._id, []);
@@ -73,8 +89,12 @@ const fetchAllAdminVisitor = async(connected_user) => {
             return;
         }
     } catch(err){
-        console.log('ERROR fetchAllAdminVisitor()');
-        throw new Error(`ERROR fetchAllAdminVisitor(): ${err}`);
+        throw Error(JSON.stringify({
+            status: custom_statusCode || 500,
+            title: custom_err_title || 'SERVER ERROR',
+            message: custom_err_message || 'Unable to save chat to the DB',
+            stack: err.stack
+        }));
     }
 }
 /**
@@ -85,11 +105,15 @@ const fetchAllAdminNotification = async(connected_user) => {
         if(connected_user){
             const decode_token = await admin.auth().verifyIdToken(connected_user.accessToken);
             if(!decode_token){
-                throw new Error('ERROR fetchAllAdminNotification(): Unauthorized.');
+                custom_statusCode = 401;
+                custom_err_message = 'Invalid auth token';
+                custom_err_title = 'UNAUTHORIZED';
             }
             const user = await User.findById(decode_token.uid);
             if(!user){
-                throw new Error("ERROR fetchAllAdminNotification(): Unable to find your visitor array...please reload and try again");
+                custom_statusCode = 404;
+                custom_err_message = 'User data not found';
+                custom_err_title = 'NOT FOUND';
             }
             if(!user.notification.length > 0) {
                 sendAdminSSEInfo('notification', user._id, []);
@@ -99,8 +123,12 @@ const fetchAllAdminNotification = async(connected_user) => {
             return
         }
     } catch(err){
-        console.log('ERROR fetchAllAdminNotification()');
-        throw new Error(`ERROR fetchAllAdminNotification(): ${err}`);
+        throw Error(JSON.stringify({
+            status: custom_statusCode || 500,
+            title: custom_err_title || 'SERVER ERROR',
+            message: custom_err_message || 'Unable to save chat to the DB',
+            stack: err.stack
+        }));
     }
 }
 /**
@@ -111,20 +139,33 @@ const fetchAdminAnalyticsData = async(connected_user) => {
         if(connected_user){
             const decode_token = await admin.auth().verifyIdToken(connected_user.accessToken)
             if(!decode_token){
-                throw new Error('ERROR fetchAdminAnalyticsData(): Unauthorized.');
+                custom_statusCode = 401;
+                custom_err_message = 'Invalid auth token';
+                custom_err_title = 'UNAUTHORIZED';
             }
             const user = await User.findById(decode_token.uid);
             if(!user){
-                throw new Error("Unable to find your visitor array...please reload and try again")
+                custom_statusCode = 404;
+                custom_err_message = 'User data not found';
+                custom_err_title = 'NOT FOUND';
             }
             const [ chatroom_collection, visitor_collection ] = await Promise.all([
-                await ChatRoom.findById(user.user_access),
-                await Visitors.findById(user.user_access)
+                ChatRoom.findById(user.user_access),
+                Visitors.findById(user.user_access)
             ]);
-            if(!chatroom_collection){
-                throw new Error('Unable to find the chatroom collection')
-            } else if (!visitor_collection){
-                throw new Error('Unable to find the visitor collection')
+            switch (!chatroom_collection || !visitor_collection){
+                case !chatroom_collection:
+                    custom_statusCode = 404;
+                    custom_err_message = 'Chatroom data not found';
+                    custom_err_title = 'NOT FOUND'
+                    break;
+                case !visitor_collection:
+                    custom_statusCode = 404;
+                    custom_err_message = 'Visitor data not found';
+                    custom_err_title = 'NOT FOUND'
+                    break;
+                default:
+                    break;
             }
             // send the analytics data
             sendAdminSSEInfo('analytics',user._id, { 
@@ -134,8 +175,12 @@ const fetchAdminAnalyticsData = async(connected_user) => {
             });
         }
     } catch(err){
-        console.log('ERROR fetchAdminAnalyticsData()');
-        throw new Error(`ERROR fetchAdminAnalyticsData(): ${err}`);
+        throw Error(JSON.stringify({
+            status: custom_statusCode || 500,
+            title: custom_err_title || 'SERVER ERROR',
+            message: custom_err_message || 'Unable to save chat to the DB',
+            stack: err.stack
+        }));
     }
 }
 
@@ -147,11 +192,15 @@ const adminLogInStatus = async(admin_hash) => {
     try{
         const user_object = await User.findOne({ user_access: admin_hash });
         if(!user_object){
-            throw new Error('ERROR adminLogInStatus(): Cannot find user...please try again');
+            custom_statusCode = 404;
+            custom_err_message = 'User data not found';
+            custom_err_title = 'NOT FOUND'
         }
         const valid_auth_user = await admin.auth().getUser(user_object._id);
         if(!valid_auth_user){
-            throw new Error('ERROR adminLogInStatus(): User not authenticated...FORBIDDEN');
+            custom_statusCode = 401;
+            custom_err_message = 'Invalid auth user hash';
+            custom_err_title = 'UNAUTHORIZED';
         } else if(valid_auth_user) {
             const user_online = connections.get(user_object._id)
             if(!user_online){
@@ -161,8 +210,12 @@ const adminLogInStatus = async(admin_hash) => {
             }
         }
     } catch(err){
-        console.log('ERROR adminLogInStatus()');
-        throw new Error(`ERROR adminLogInStatus(): ${err}`);
+        throw Error(JSON.stringify({
+            status: custom_statusCode || 500,
+            title: custom_err_title || 'SERVER ERROR',
+            message: custom_err_message || 'Unable to save chat to the DB',
+            stack: err.stack
+        }));
     }
 }
 /**
@@ -173,13 +226,19 @@ const widgetInstallStatus = async(user_hash, data) => {
         // fetch the user with his hash
         const current_user = await User.findOne({ user_access: user_hash });
         if(!current_user){
-            throw new Error('ERROR WidgetInstallStatus(): Unable to find the user');
+            custom_statusCode = 404;
+            custom_err_message = 'User data not found';
+            custom_err_title = 'NOT FOUND'
         }
         // send the widget status
         sendAdminSSEInfo('widget_status', current_user._id, data);
     } catch(err){
-        console.log('ERROR widgetInstallStatus()');
-        throw new Error(`ERROR widgetInstallStatus(): ${err}`);
+        throw Error(JSON.stringify({
+            status: custom_statusCode || 500,
+            title: custom_err_title || 'SERVER ERROR',
+            message: custom_err_message || 'Unable to save chat to the DB',
+            stack: err.stack
+        }));
     }
 }
 

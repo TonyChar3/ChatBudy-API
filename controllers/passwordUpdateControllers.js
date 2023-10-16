@@ -1,6 +1,9 @@
 import asyncHandler from 'express-async-handler';
 import { checkRequestCache } from '../utils/manageVisitors.js';
 import { redis_rate_limit } from '../server.js';
+let custom_statusCode;
+let custom_err_message;
+let custom_err_title;
 
 //@desc route to apply a limit of forgot password email sent to a specific email
 //@route POST /password-update/request-limit
@@ -19,12 +22,15 @@ const RequestSentLimitCheck = asyncHandler(async(req,res,next) => {
             // return true
             res.status(200).send({ request_allowed: true });
         } else {
-            res.status(500);
-            next();
+            custom_err_message = 'Verifying cached failed';
         }
     } catch(err){
-        console.log('ERROR RequestSentLimitCheck');
-        next(err);
+        next({ 
+            statusCode: custom_statusCode || 500, 
+            title: custom_err_title || 'SERVER ERROR', 
+            message: custom_err_message, 
+            stack: err.stack 
+        });
     }
 });
 

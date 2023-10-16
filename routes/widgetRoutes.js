@@ -8,10 +8,10 @@ router.post('/sse-auth', widgetSSEAuth);
 
 router.get('/sse-connection', widgetSSEConnection);
 
-router.get('/style-:userhash', widgetStyling);
+router.get('/style-:user_hash', widgetStyling);
 
 router.post('/save', saveWidgetStyling);
 
-router.get('/:userhash', initializeWidgetTemplate);
+router.get('/:user_hash', initializeWidgetTemplate);
 
 export default router;

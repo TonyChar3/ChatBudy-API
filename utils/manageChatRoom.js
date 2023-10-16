@@ -5,6 +5,9 @@ import dotenv from 'dotenv';
 import { sendAdminSSEInfo, sendWidgetVisitorNotifications } from './manageSSE.js';
 // use .env variables
 dotenv.config();
+let custom_statusCode = '';
+let custom_err_message = '';
+let custom_err_title = '';
 
 const chat_rooms = new Map();
 
@@ -14,29 +17,39 @@ const chat_rooms = new Map();
 const saveDBChat = async(visitor_id, user_hash, chat_array) => {
     try{
         // find the room
-        const user_collection = await Chatroom.findById(user_hash);
-        if(!user_collection){
-            throw new Error('ERROR saveDBChat(): Unable to find room to save and update...');
+        const chatroom_collection = await Chatroom.findById(user_hash);
+        if(!chatroom_collection){
+            custom_statusCode = 404;
+            custom_err_message = 'User data not found';
+            custom_err_title = 'NOT FOUND';
         }
         // find the visitor convo
-        const visitor_convo = user_collection.chat_rooms.findIndex(rooms => rooms.visitor.toString() === visitor_id.toString());
+        const visitor_convo = chatroom_collection.chat_rooms.findIndex(rooms => rooms.visitor.toString() === visitor_id.toString());
         if(visitor_convo === -1){
-            throw new Error('ERROR saveDBChat(): Unable to find this visitor...please try again');
+            custom_statusCode = 404;
+            custom_err_message = 'Visitor chat room not found';
+            custom_err_title = 'NOT FOUND';
         }
         chat_array.forEach(msg => {
-            user_collection.chat_rooms[visitor_convo].messages.push(msg);
+            chatroom_collection.chat_rooms[visitor_convo].messages.push(msg);
         });
         // save modifications...
-        const save_chat = await user_collection.save();
+        const save_chat = await chatroom_collection.save();
         if(!save_chat){
-            throw new Error('ERROR saveDBChat(): Unable to save the chat to the DB...');
+            custom_statusCode = 500;
+            custom_err_message = 'Failed to save the chat';
+            custom_err_title = 'SERVER ERROR';
         }
         // delete the chatroom from the Map()
         chat_rooms.delete(visitor_id);
         return true
     } catch(err){
-        console.log('ERROR saveDBChat()');
-        throw new Error(`ERROR saveDBChat(): ${err}`);
+        throw Error(JSON.stringify({
+            status: custom_statusCode || 500,
+            title: custom_err_title || 'SERVER ERROR',
+            message: custom_err_message || 'Unable to save chat to the DB',
+            stack: err.stack
+        }));
     }
 }
 /**
@@ -64,7 +77,7 @@ const saveChat = async(method, user_hash, visitor_id, new_chat) => {
                     // save it to the DB
                     const db_save = await saveDBChat(visitor_id, user_hash, chat_array);
                     if(!db_save){
-                        throw new Error('ERROR saveChat(): unable to save to DB the chat messages...');
+                        return db_save;
                     }
                     return true
                 }
@@ -77,14 +90,18 @@ const saveChat = async(method, user_hash, visitor_id, new_chat) => {
                 // save it to the DB
                 const db_save = await saveDBChat(key, user_hash, array);
                 if(!db_save){
-                    throw new Error('ERROR saveChat(): unable to save to the DB...');
+                    return db_save;
                 }
                 return true;
             }
         }); 
     } catch(err){
-        console.log('ERROR saveChat()');
-        throw new Error(`ERROR saveChat(): ${err}`);
+        throw Error(JSON.stringify({
+            status: custom_statusCode || 500,
+            title: custom_err_title || 'SERVER ERROR',
+            message: custom_err_message || 'Unable to save chat to the DB',
+            stack: err.stack
+        }));
     }
 }
 /**
@@ -95,14 +112,15 @@ const cacheSentChat = async(redis_client, user_hash, ws_id, ws_chatroom, new_msg
         if(Object.keys(new_msg_obj).length > 0){
             await saveChat('ADD', user_hash, ws_id, new_msg_obj);
             // cache it inside Redis server
-            const caching_msg = await redis_client.set(ws_id, JSON.stringify(ws_chatroom), 'EX', 1800);
-            if(!caching_msg){
-                throw new Error('ERROR cacheSentChat(): Unable to cache the message');
-            }
+            await redis_client.set(ws_id, JSON.stringify(ws_chatroom), 'EX', 1800);
         }
     }catch(err){
-        console.log('ERROR cacheSetnChat()');
-        throw new Error(`ERROR cacheSetnChat(): ${err}`);
+        throw Error(JSON.stringify({
+            status: custom_statusCode || 500,
+            title: custom_err_title || 'SERVER ERROR',
+            message: custom_err_message || 'Unable to save chat to the DB',
+            stack: err.stack
+        }));
     }
 }
 /**
@@ -133,8 +151,12 @@ const verifyCache = async(verify_mode, client, visitor_id, chat_obj) => {
                 break;
         }
     } catch(err){
-        console.log('ERROR verifyCache()');
-        throw new Error(`ERROR verifyCache(): ${err}`);
+        throw Error(JSON.stringify({
+            status: custom_statusCode || 500,
+            title: custom_err_title || 'SERVER ERROR',
+            message: custom_err_message || 'Unable to save chat to the DB',
+            stack: err.stack
+        }));
     }
 }
 /**
@@ -148,11 +170,15 @@ const checkAndSetWSchatRoom = async(cache_key_name, redis_client, visitor_id, us
             // fetch the chatroom
             const chat_room_collection = await Chatroom.findById(user_hash);
             if(!chat_room_collection){
-                throw new Error('ERROR checkAndSetWSchatRoom(): chatroom collection not found()');
+                custom_statusCode = 404;
+                custom_err_message = 'Chatroom data not found';
+                custom_err_title = 'NOT FOUND';
             }
             const room_index = chat_room_collection.chat_rooms.findIndex(rooms => rooms.visitor.toString() === visitor_id.toString());
             if(room_index === -1){
-                throw new Error('ERROR checkAndSetWSchatRoom(): room index not found in the collection chatrooms array');
+                custom_statusCode = 404;
+                custom_err_message = 'Chatroom not found';
+                custom_err_title = 'NOT FOUND';
             }
             connection_map.set(visitor_id, chat_room_collection.chat_rooms[room_index]);
             await verifyCache(cache_key_name,redis_client, visitor_id, chat_room_collection.chat_rooms[room_index]);
@@ -164,8 +190,12 @@ const checkAndSetWSchatRoom = async(cache_key_name, redis_client, visitor_id, us
         }
         return { message: 'room found and set'}
     } catch(err){
-        console.log('ERROR checkAndSetWSchatRoom()');
-        throw new Error(`ERROR checkAndSetWSchatRoom(): ${err}`);
+        throw Error(JSON.stringify({
+            status: custom_statusCode || 500,
+            title: custom_err_title || 'SERVER ERROR',
+            message: custom_err_message || 'Unable to save chat to the DB',
+            stack: err.stack
+        }));
     }
 }
 /**
@@ -178,12 +208,16 @@ const sendWsUserNotification = async(client_type, user_hash, client_id, notif_ob
                 // check the visitor collection
                 const visitor_collection = await Visitors.findById(user_hash);
                 if(!visitor_collection){
-                    throw new Error("ERROR sendNotification(): Visitor notifications not found... try again");
+                    custom_statusCode = 404;
+                    custom_err_message = 'Visitor notification data not found';
+                    custom_err_title = 'NOT FOUND';
                 }
                 // find the visitor index in the array
                 const visitor_index = visitor_collection.visitor.findIndex(visitor => visitor._id.toString() === client_id);
                 if(visitor_index === -1){
-                    throw new Error('ERROR sendNotification(): No visitors found to notify... please try again');
+                    custom_statusCode = 404;
+                    custom_err_message = 'Visitor not found';
+                    custom_err_title = 'NOT FOUND';
                 }
                 // update his notification array
                 const visitor = visitor_collection.visitor[visitor_index]
@@ -192,7 +226,9 @@ const sendWsUserNotification = async(client_type, user_hash, client_id, notif_ob
                 // save it
                 const add_notification = await visitor_collection.save();
                 if(!add_notification){
-                    throw new Error("ERROR sendNotification(): Unable to notify the visitor...please try again");
+                    custom_statusCode = 500;
+                    custom_err_message = 'Unable to save the new notification data';
+                    custom_err_title = 'SERVER ERROR';
                 }
                 sendWidgetVisitorNotifications(visitor._id, visitor_notif_array);
                 break;
@@ -200,7 +236,9 @@ const sendWsUserNotification = async(client_type, user_hash, client_id, notif_ob
                 // check the user collection
                 const user = await User.findOne({ user_access: user_hash });
                 if(!user){
-                    throw new Error('ERROR sendNotification(): Admin unable to find the user to notify... please try again');
+                    custom_statusCode = 404;
+                    custom_err_message = 'User data not found';
+                    custom_err_title = 'NOT FOUND';
                 }
                 const admin_notif_array = user.notification
                 const update_array = await user.updateOne({
@@ -212,7 +250,9 @@ const sendWsUserNotification = async(client_type, user_hash, client_id, notif_ob
                     }
                 });
                 if(!update_array){
-                    throw new Error('ERROR sendNotification(): Admin unable to notify... try again');
+                    custom_statusCode = 500;
+                    custom_err_message = 'Unable to save user new notification data';
+                    custom_err_title = 'SERVER ERROR';
                 }
                 // Send the notification to the frontend
                 admin_notif_array.unshift(notif_object);
@@ -222,8 +262,12 @@ const sendWsUserNotification = async(client_type, user_hash, client_id, notif_ob
                 break;
         }
     }catch(err){
-        console.log('ERROR sendNotification()');
-        throw new Error(`ERROR sendNotification(): ${err}`);
+        throw Error(JSON.stringify({
+            status: custom_statusCode || 500,
+            title: custom_err_title || 'SERVER ERROR',
+            message: custom_err_message || 'Unable to save chat to the DB',
+            stack: err.stack
+        }));
     }
 }
 /**
@@ -234,12 +278,16 @@ const askEmailForm = async(user_hash, visitor_id) => {
         // fetch the visitor from the DB
         const visitor_collection = await Visitors.findById(user_hash);
         if(!visitor_collection){
-            throw new Error("ERROR askEmailForm(): Set visitor email function ERROR: Unable to find the visitor collection");
+            custom_statusCode = 404;
+            custom_err_message = 'Visitor data not found';
+            custom_err_title = 'NOT FOUND';
         }
         // find the specific visitor object
         const visitor_index = visitor_collection.visitor.findIndex(visitors => visitors.id.toString() === visitor_id.toString());
         if(visitor_index === -1){
-            throw new Error("ERROR askEmailForm(): Set visitor email function ERROR: Unable to find the visitor in the array");
+            custom_statusCode = 404;
+            custom_err_message = 'Visitor not found';
+            custom_err_title = 'NOT FOUND';
         }
         // visitor got no email -> make the ws send the form 
         if(!visitor_collection.visitor[visitor_index].email){
@@ -248,8 +296,12 @@ const askEmailForm = async(user_hash, visitor_id) => {
         // visitor got his email -> just continue like normal
         return true
     } catch(err){
-        console.log('ERROR askEmailForm()');
-        throw new Error(`ERROR askEmailForm(): ${err}`);
+        throw Error(JSON.stringify({
+            status: custom_statusCode || 500,
+            title: custom_err_title || 'SERVER ERROR',
+            message: custom_err_message || 'Unable to save chat to the DB',
+            stack: err.stack
+        }));
     }
 }
 /**
@@ -261,7 +313,9 @@ const setConversionRate = async(user_hash) => {
         // find the chatroom collection
         const chatroom_collection = await Chatroom.findById(user_hash);
         if(!chatroom_collection){
-            throw new Error('ERROR SetConversionRate(): Unable to find the user chatroom collection');
+            custom_statusCode = 404;
+            custom_err_message = 'Chatroom data not found';
+            custom_err_title = 'NOT FOUND';
         }
         // find the index of an object that matches todays date
         const conversion_object_index = chatroom_collection.conversionData.findIndex((objects) => objects.createdAt.toDateString() === today.toDateString());
@@ -277,8 +331,12 @@ const setConversionRate = async(user_hash) => {
         await chatroom_collection.save();
         return
     } catch(err){
-        console.log('ERROR setConversionRate()');
-        throw new Error(`ERROR setConversionRate() ${err}`);
+        throw Error(JSON.stringify({
+            status: custom_statusCode || 500,
+            title: custom_err_title || 'SERVER ERROR',
+            message: custom_err_message || 'Unable to save chat to the DB',
+            stack: err.stack
+        }));
     }
 }
 

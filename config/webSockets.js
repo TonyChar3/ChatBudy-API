@@ -89,7 +89,6 @@ export const webSocketServerSetUp = (redis_client, server) => {
             const received_msg = JSON.parse(msg)
             user_ws_connected = wss_connections.get(visitorID)
             let new_msg = {}
-            let notification_obj = {};
 
             switch (received_msg.type || received_msg.senderType){
                 case 'typing':

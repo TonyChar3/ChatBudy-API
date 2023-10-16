@@ -10,5 +10,4 @@ const corsOptions = async(req, callback ) => {
     }
 };
 
-
 export { corsOptions }
