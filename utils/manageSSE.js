@@ -5,10 +5,6 @@ import admin from 'firebase-admin';
 import Visitors from '../models/visitorsModels.js';
 import ChatRoom from '../models/chatRoomModels.js';
 
-let custom_statusCode = '';
-let custom_err_message = '';
-let custom_err_title = '';
-
 /**
  * Function to update the visitors info safely
  *  when the visitor submits a new email or not
@@ -16,20 +12,15 @@ let custom_err_title = '';
 const sendAdminFreshUpdatedInfo = async(user_hash, data) => {
     try{
         const user = await User.findOne({ user_access: user_hash });
-        if(!user){
-            custom_statusCode = 404;
-            custom_err_message = 'User data not found';
-            custom_err_title = 'NOT FOUND';
-        }
         // send info to the front-end
         sendAdminSSEInfo('visitor', user._id, data);
     } catch(err){
-        throw Error(JSON.stringify({
-            status: custom_statusCode || 500,
-            title: custom_err_title || 'SERVER ERROR',
-            message: custom_err_message || 'Unable to save chat to the DB',
-            stack: err.stack
-        }));
+        console.log('sendAdminFreshUpdatedInfo() at manageSSE.js in utils: Unable to send Admin new info. ', err.stack);
+        return {
+            error: true,
+            error_msg: 'sendAdminFreshUpdatedInfo() at manageSSE.js in utils: Unable to send Admin new info',
+            error_stack: err.stack || 'NO STACK TRACE.'
+        }
     }
 }
 /**
@@ -37,12 +28,8 @@ const sendAdminFreshUpdatedInfo = async(user_hash, data) => {
  */
 const sendAdminSSEInfo = (type_name, user_id, data) => {
     const connection = connections.get(user_id);
-    const data_object = {
-        type: type_name,
-        data: data
-    }
     if(connection){
-        connection.write(`data:${JSON.stringify(data_object)}\n\n`);
+        connection.write(`data:${JSON.stringify({ type: type_name, data: data })}\n\n`);
     }  
 }
 /**
@@ -55,8 +42,6 @@ const sendWidgetVisitorNotifications = (user_id, data) => {
         connection.write(`data:${JSON.stringify(data.length)}\n\n`);
     }
 }
-
-
 /**
  * Function to send the visitors array to the front-end
  */
@@ -64,23 +49,8 @@ const fetchAllAdminVisitor = async(connected_user) => {
     try{
         if(connected_user){
             const decode_token = await admin.auth().verifyIdToken(connected_user.accessToken);
-            if(!decode_token){
-                custom_statusCode = 401;
-                custom_err_message = 'Invalid auth token';
-                custom_err_title = 'UNAUTHORIZED';
-            }
             const user = await User.findById(decode_token.uid);
-            if(!user){
-                custom_statusCode = 404;
-                custom_err_message = 'User data not found';
-                custom_err_title = 'NOT FOUND';
-            }
             const visitor_collection = await Visitors.findById(user.user_access);
-            if(!visitor_collection) {
-                custom_statusCode = 404;
-                custom_err_message = 'Visitor data not found';
-                custom_err_title = 'NOT FOUND';
-            }
             if(!visitor_collection.visitor.length > 0){
                 sendAdminSSEInfo('visitor', user._id, []);
                 return;
@@ -89,12 +59,12 @@ const fetchAllAdminVisitor = async(connected_user) => {
             return;
         }
     } catch(err){
-        throw Error(JSON.stringify({
-            status: custom_statusCode || 500,
-            title: custom_err_title || 'SERVER ERROR',
-            message: custom_err_message || 'Unable to save chat to the DB',
-            stack: err.stack
-        }));
+        console.log('fetchAllAdminVisitor() at manageSSE.js in utils: Unable to fetch admin visitor data. ', err.stack);
+        return {
+            error: true,
+            error_msg: 'fetchAllAdminVisitor() at manageSSE.js in utils: Unable to fetch admin visitor data',
+            error_stack: err.stack || 'NO STACK TRACE.'
+        }
     }
 }
 /**
@@ -104,17 +74,7 @@ const fetchAllAdminNotification = async(connected_user) => {
     try{
         if(connected_user){
             const decode_token = await admin.auth().verifyIdToken(connected_user.accessToken);
-            if(!decode_token){
-                custom_statusCode = 401;
-                custom_err_message = 'Invalid auth token';
-                custom_err_title = 'UNAUTHORIZED';
-            }
             const user = await User.findById(decode_token.uid);
-            if(!user){
-                custom_statusCode = 404;
-                custom_err_message = 'User data not found';
-                custom_err_title = 'NOT FOUND';
-            }
             if(!user.notification.length > 0) {
                 sendAdminSSEInfo('notification', user._id, []);
                 return
@@ -123,12 +83,12 @@ const fetchAllAdminNotification = async(connected_user) => {
             return
         }
     } catch(err){
-        throw Error(JSON.stringify({
-            status: custom_statusCode || 500,
-            title: custom_err_title || 'SERVER ERROR',
-            message: custom_err_message || 'Unable to save chat to the DB',
-            stack: err.stack
-        }));
+        console.log('fetchAllAdminNotification() at manageSSE.js in utils: Unable to fetch admin notification data. ', err.stack);
+        return {
+            error: true,
+            error_msg: 'fetchAllAdminNotification() at manageSSE.js in utils: Unable to fetch admin notification data',
+            error_stack: err.stack || 'NO STACK TRACE.'
+        }
     }
 }
 /**
@@ -137,36 +97,12 @@ const fetchAllAdminNotification = async(connected_user) => {
 const fetchAdminAnalyticsData = async(connected_user) => {
     try{
         if(connected_user){
-            const decode_token = await admin.auth().verifyIdToken(connected_user.accessToken)
-            if(!decode_token){
-                custom_statusCode = 401;
-                custom_err_message = 'Invalid auth token';
-                custom_err_title = 'UNAUTHORIZED';
-            }
+            const decode_token = await admin.auth().verifyIdToken(connected_user.accessToken);
             const user = await User.findById(decode_token.uid);
-            if(!user){
-                custom_statusCode = 404;
-                custom_err_message = 'User data not found';
-                custom_err_title = 'NOT FOUND';
-            }
             const [ chatroom_collection, visitor_collection ] = await Promise.all([
                 ChatRoom.findById(user.user_access),
                 Visitors.findById(user.user_access)
             ]);
-            switch (!chatroom_collection || !visitor_collection){
-                case !chatroom_collection:
-                    custom_statusCode = 404;
-                    custom_err_message = 'Chatroom data not found';
-                    custom_err_title = 'NOT FOUND'
-                    break;
-                case !visitor_collection:
-                    custom_statusCode = 404;
-                    custom_err_message = 'Visitor data not found';
-                    custom_err_title = 'NOT FOUND'
-                    break;
-                default:
-                    break;
-            }
             // send the analytics data
             sendAdminSSEInfo('analytics',user._id, { 
                 conversion_data: chatroom_collection.conversionData,
@@ -175,33 +111,22 @@ const fetchAdminAnalyticsData = async(connected_user) => {
             });
         }
     } catch(err){
-        throw Error(JSON.stringify({
-            status: custom_statusCode || 500,
-            title: custom_err_title || 'SERVER ERROR',
-            message: custom_err_message || 'Unable to save chat to the DB',
-            stack: err.stack
-        }));
+        console.log('fetchAdminAnalyticsData() at manageSSE.js in utils: Unable to fetch admin analytics data. ', err.stack);
+        return {
+            error: true,
+            error_msg: 'fetchAdminAnalyticsData() at manageSSE.js in utils: Unable to fetch admin analytics data',
+            error_stack: err.stack || 'NO STACK TRACE.'
+        }
     }
 }
-
-
 /**
  * Function to send the Admin log in status to the widget
  */
 const adminLogInStatus = async(admin_hash) => {
     try{
         const user_object = await User.findOne({ user_access: admin_hash });
-        if(!user_object){
-            custom_statusCode = 404;
-            custom_err_message = 'User data not found';
-            custom_err_title = 'NOT FOUND'
-        }
         const valid_auth_user = await admin.auth().getUser(user_object._id);
-        if(!valid_auth_user){
-            custom_statusCode = 401;
-            custom_err_message = 'Invalid auth user hash';
-            custom_err_title = 'UNAUTHORIZED';
-        } else if(valid_auth_user) {
+        if(valid_auth_user) {
             const user_online = connections.get(user_object._id)
             if(!user_online){
                 return false
@@ -210,12 +135,12 @@ const adminLogInStatus = async(admin_hash) => {
             }
         }
     } catch(err){
-        throw Error(JSON.stringify({
-            status: custom_statusCode || 500,
-            title: custom_err_title || 'SERVER ERROR',
-            message: custom_err_message || 'Unable to save chat to the DB',
-            stack: err.stack
-        }));
+        console.log('adminLogInStatus() at manageSSE.js in utils: Unable to set admin status. ', err.stack);
+        return {
+            error: true,
+            error_msg: 'adminLogInStatus() at manageSSE.js in utils: Unable to set admin status.',
+            error_stack: err.stack || 'NO STACK TRACE.'
+        }
     }
 }
 /**
@@ -225,20 +150,15 @@ const widgetInstallStatus = async(user_hash, data) => {
     try{
         // fetch the user with his hash
         const current_user = await User.findOne({ user_access: user_hash });
-        if(!current_user){
-            custom_statusCode = 404;
-            custom_err_message = 'User data not found';
-            custom_err_title = 'NOT FOUND'
-        }
         // send the widget status
         sendAdminSSEInfo('widget_status', current_user._id, data);
     } catch(err){
-        throw Error(JSON.stringify({
-            status: custom_statusCode || 500,
-            title: custom_err_title || 'SERVER ERROR',
-            message: custom_err_message || 'Unable to save chat to the DB',
-            stack: err.stack
-        }));
+        console.log('widgetInstallStatus() at manageSSE.js in utils: Unable to set widget install status. ', err.stack);
+        return {
+            error: true,
+            error_msg: 'widgetInstallStatus() at manageSSE.js in utils: Unable to set widget install status.',
+            error_stack: err.stack || 'NO STACK TRACE.'
+        }
     }
 }
 

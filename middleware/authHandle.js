@@ -22,11 +22,8 @@ const VerifyFirebaseToken = async(req,res) => {
  */
 const VerifyUserHash = async(req,res) => {
     try{
-        const { user_hash } = req.params || req.body || req.body.data || req.params.id  
-        const user = await User.findOne({ user_access: user_hash });
-        if(!user){
-            return false;
-        }
+        const { user_hash } = req.params || req.body || req.body.data || req.params.id 
+        await User.findOne({ user_access: user_hash });
         return true;
     } catch(err){
         return res.status(401).json({

@@ -42,8 +42,9 @@ const visitorInfoFetch = asyncHandler( async(req,res,next) => {
 //@access PRIVATE
 const createVisitor = asyncHandler(async(req,res,next) => {
     // verify the user hash
-    VerifyUserHash(req,res);
+    await VerifyUserHash(req,res);
     try{
+        const { user_hash } = req.params 
         const { isoCode, browser } = req.body;
         const visitor_uid = generateRandomID(user_hash);
         const visitor_browser = getVisitorBrowser(browser);
@@ -52,7 +53,7 @@ const createVisitor = asyncHandler(async(req,res,next) => {
             User.findOne({ user_access: user_hash })
         ]);
         if(!visitor || !visitor_browser || !visitor_uid || !user){
-            const error_variable = !visitor || !visitor_browser || !visitor_uid || !user;
+            const error_variable = !visitor || !visitor_browser || visitor_uid.error || !user;
             switch (error_variable){
                 case !visitor:
                     custom_statusCode = 404;
@@ -64,9 +65,9 @@ const createVisitor = asyncHandler(async(req,res,next) => {
                     custom_err_message = 'Visitor browser not set correctly';
                     custom_err_title = 'NOT FOUND';
                     break;
-                case !visitor_uid:
+                case visitor_uid.error:
                     custom_statusCode = 500;
-                    custom_err_message = 'Unable to set a unique UID for the visitor';
+                    custom_err_message = visitor_uid.error_msg;
                     custom_err_title = 'SERVER ERROR';
                     break;
                 case !user:
@@ -86,6 +87,7 @@ const createVisitor = asyncHandler(async(req,res,next) => {
             custom_statusCode = 500;
             custom_err_message = 'Unable to save updated analytics data';
             custom_err_title = 'SERVER ERROR';
+            
         }
         // create a new visitor 
         const add_visitor = await visitor.updateOne({
@@ -116,10 +118,17 @@ const createVisitor = asyncHandler(async(req,res,next) => {
         // update SSE data
         sendAdminSSEInfo('visitor', user._id, visitor.visitor)
         // notify the user
-        sendWsUserNotification("admin", user_hash, visitor_uid, { sent_from: "Admin", title: "New visitor", content: `${visitor_uid} is visiting` });
+        const notify_ws_user = sendWsUserNotification("admin", user_hash, visitor_uid, { sent_from: "Admin", title: "New visitor", content: `${visitor_uid} is visiting` });
+        if(notify_ws_user.error){
+            console.log(notify_ws_user);
+            custom_statusCode = 500;
+            custom_err_message = 'Unable to notify the offline user';
+            custom_err_title = 'SERVER ERROR';
+        }
         // generate a new JWT token for the visitor
         const generate_token = generateJWT(visitor_uid);
-        if(!generate_token){
+        if(generate_token.error){
+            console.log(generate_token);
             custom_statusCode = 500;
             custom_err_message = 'Unable to generate a new visitor auth token';
             custom_err_title = 'SERVER ERROR';
@@ -141,7 +150,7 @@ const createVisitor = asyncHandler(async(req,res,next) => {
 //@access PRIVATE
 const deleteVisitor = asyncHandler( async(req,res,next) => {
     // verify the user hash
-    VerifyUserHash(req,res);
+    await VerifyUserHash(req,res);
     try{
         // will need the user hash + the visitor _id
         const { user_hash, visitor_id } = req.body;

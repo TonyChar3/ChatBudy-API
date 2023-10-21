@@ -15,7 +15,7 @@ const RequestSentLimitCheck = asyncHandler(async(req,res,next) => {
         // check the cache for the object
         const verify_cache = await checkRequestCache(redis_rate_limit, limit_obj.email);
         // if it exceeds 5 return a false 
-        if(!verify_cache){
+        if(verify_cache.error){
             // else just return false
             res.status(200).send({ request_allowed: false });
         } else if (verify_cache){
@@ -23,6 +23,7 @@ const RequestSentLimitCheck = asyncHandler(async(req,res,next) => {
             res.status(200).send({ request_allowed: true });
         } else {
             custom_err_message = 'Verifying cached failed';
+            throw new Error();
         }
     } catch(err){
         next({ 

@@ -20,10 +20,6 @@ const PUB_KEY = fs.readFileSync(pathToPubKey, 'utf8');
 const WS_PUB_KEY = fs.readFileSync(pathToWSPubKey, 'utf8');
 const WS_PRIV_KEY = fs.readFileSync(pathToWSPrivKey, 'utf8');
 
-let custom_statusCode = 0;
-let custom_err_message = '';
-let custom_err_title = '';
-
 /**
  * Generate a random identifier for a visitor
  */
@@ -55,12 +51,12 @@ const uniqueUserHash = async() => {
         }
     } while (hash_flag === true);
   } catch(err){
-    throw Error(JSON.stringify({
-        status: 404,
-        title: 'NOT FOUND',
-        message: 'User data not found',
-        stack: err.stack
-    }));
+    console.log('uniqueUserHash() at manageVisitors.js in utils: Fail to create a unique user hash. ', err.stack);
+    return {
+      error: true,
+      error_msg: 'uniqueUserHash() at manageVisitors.js in utils: Fail to create a unique user hash',
+      error_stack: err.stack || 'NO STACK TRACE.'
+    }
   }
 }
 /**
@@ -89,12 +85,12 @@ const uniqueVisitorID = async(array_id) => {
       } while (uid_flag === true); 
       return visitor_uid;
     } catch(err){
-      throw Error(JSON.stringify({
-        status: 404,
-        title: 'NOT FOUND',
-        message: 'Visitor data not found',
-        stack: err.stack
-      }));
+      console.log('uniqueVisitorID() at manageVisitors.js in utils: Fail to create a unique visitor id. ', err.stack);
+      return {
+        error: true,
+        error_msg: 'uniqueVisitorID() at manageVisitors.js in utils: Fail to create a unique visitor id',
+        error_stack: err.stack || 'NO STACK TRACE.'
+      }
     }
 }
 /**
@@ -173,12 +169,12 @@ const generateJWT = (visitor_id, user_hash, login_user) => {
       }
     }
   } catch(err){
-    throw Error(JSON.stringify({
-      status: 500,
-      title: 'SERVER ERROR',
-      message: 'Unable to generate a new JWT token',
-      stack: err.stack
-  }));
+    console.log('generateJWT() at manageVisitors.js in utils: Unable to generate a fresh JWT token. ', err.stack);
+    return {
+      error: true,
+      error_msg: 'generateJWT() at manageVisitors.js in utils: Unable to generate a fresh JWT token.',
+      error_stack: err.stack || 'NO STACK TRACE.'
+    }
   }
 }
 /**
@@ -202,7 +198,7 @@ const decodeJWT = async(token, type_name) => {
       return false
     }
   } catch(err){
-    console.log('ERROR decodeJWT(): ',err);
+    console.log('ERROR decodeJWT(): ', err);
     return {}
   }
 }
@@ -210,41 +206,25 @@ const decodeJWT = async(token, type_name) => {
  * Set the visitor email section
  */
 const setVisitorEmail = async(user_hash, visitor_id, email) => {
-
   try{
     // find user visitor collection
     const visitor_collection = await Visitor.findById(user_hash);
-    if(!visitor_collection){
-      custom_statusCode = 404;
-      custom_err_message = 'Visitor data not found';
-      custom_err_title = 'NOT FOUND';
-    }
     // get the visitor object index in the user visitor array
     const visitor_index = visitor_collection.visitor.findIndex(visitor => visitor._id.toString() === visitor_id.toString());
-    if(visitor_index === -1){
-      custom_statusCode = 404;
-      custom_err_message = 'Visitor not found';
-      custom_err_title = 'NOT FOUND';
-    } 
     // set the new field
     visitor_collection.visitor[visitor_index].email = email;
     // save it
-    const save_updates = await visitor_collection.save();
-    if(!save_updates){
-      custom_statusCode = 500;
-      custom_err_message = 'Unable to save new updated Visitor data';
-      custom_err_title = 'SERVER ERROR';
-    }
+    await visitor_collection.save();
     // send new info to the admin panel
     sendAdminFreshUpdatedInfo(user_hash, visitor_collection.visitor);
     return true;
   } catch(err){
-    throw Error(JSON.stringify({
-      status: custom_statusCode || 500,
-      title: custom_err_title || 'SERVER FOUND',
-      message: custom_err_message || 'Unable to set a new email',
-      stack: err.stack
-    }));
+    console.log('setVisitorEmail() at manageVisitors.js in utils: Cannot set new visitor email. ', err.stack);
+    return {
+      error: true,
+      error_msg: 'setVisitorEmail() at manageVisitors.js in utils: Cannot set new visitor email',
+      error_stack: err.stack || 'NO STACK TRACE.'
+    }
   }
 }
 /**
@@ -270,12 +250,12 @@ const checkRequestCache = async(redis_client, obj_email) => {
       return true
     }
   } catch(err){
-    throw Error(JSON.stringify({
-      status: 500,
-      title: 'SERVER FOUND',
-      message: 'Nothing found during cache check',
-      stack: err.stack
-    }));
+    console.log('checkRequestCache() at manageVisitors.js in utils: Nothing found during cache check. ', err.stack);
+    return {
+      error: true,
+      error_msg: 'checkRequestCache() at manageVisitors.js in utils: Nothing found during cache check',
+      error_stack: err.stack || 'NO STACK TRACE.'
+    }
   }
 }
 /**
@@ -297,12 +277,12 @@ const visitorSSEAuth = async(req) => {
       }
       return decoded
   } catch(err){
-    throw Error(JSON.stringify({
-      status: custom_statusCode || 500,
-      title: custom_err_title || 'SERVER FOUND',
-      message: custom_err_message || 'Unable to set a new email',
-      stack: err.stack
-    }));
+    console.log('visitorSSEAuth() at manageVisitors.js in utils: SSE authentication failed. ', err.stack);
+    return {
+      error: true,
+      error_msg: 'visitorSSEAuth() at manageVisitors.js in utils: SSE authentication failed',
+      error_stack: err.stack || 'NO STACK TRACE.'
+    }
   }
 }
 /**

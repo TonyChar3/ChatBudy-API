@@ -19,10 +19,10 @@ let custom_err_title;
 const initializeWidgetTemplate = asyncHandler( async(req,res,next) => {
     let userhash;
     // verify if the user hash is still ok
-    const verify_user_access = await VerifyUserHash(req,res);
+    const verify_hash = await VerifyUserHash(req,res);
     try{
-        if(verify_user_access){
-            const { user_hash } = req.body;
+        if(verify_hash){
+            const { user_hash } = req.params;
             userhash = user_hash;
         }
         // get the loader script
@@ -33,7 +33,10 @@ const initializeWidgetTemplate = asyncHandler( async(req,res,next) => {
             custom_err_title = 'NOT FOUND';
         }
         // set installed to true
-        widgetInstallStatus(userhash, true);
+        const widget_status = widgetInstallStatus(userhash, true);
+        if(widget_status.error){
+            throw new Error(`${widget_status.error_msg}`);
+        }
         // Replace '{{USER_HASH}}' with the actual user hash
         const scriptContent = response.data.replace('{{USER_HASH}}', userhash);
         // Send the modified script content as the response
@@ -78,12 +81,7 @@ const widgetCustomLink = asyncHandler(async(req,res,next) => {
 const widgetSSEAuth = asyncHandler( async(req,res,next) => {
     try{
         // verify the hash
-        const verify_user_hash = VerifyUserHash(req,res);
-        if(!verify_user_hash){
-            custom_statusCode = 401;
-            custom_err_message = 'Invalid User hash';
-            custom_err_title = 'UNAUTHORIZED';
-        }
+        await VerifyUserHash(req,res);
         // authenticate the visitor before setting up the SSE connection
         const auth_visitor = await visitorSSEAuth(req);
         if(!Object.keys(auth_visitor).length === 0){
@@ -93,7 +91,7 @@ const widgetSSEAuth = asyncHandler( async(req,res,next) => {
         }
         connect_sse = {
             id: auth_visitor.id,
-            user_access: user_access
+            user_access: req.body.user_hash
         }
         res.status(201).json({ sse_link: process.env.WIDGET_SSE_CONNECTION_LINK });
     } catch(err){
@@ -149,11 +147,7 @@ const widgetSSEConnection = asyncHandler(async(req,res,next) => {
 const widgetStyling = asyncHandler(async(req,res,next) => {
     try{
         // verify user hash
-        const verify_user_hash = VerifyUserHash(req,res);
-        if(!verify_user_hash){
-            custom_err_message = 'User hash is not valid';
-            custom_err_title = 'UNAUTHORIZED';
-        }
+        await VerifyUserHash(req,res);
         // get the user_hash
         const { user_hash } = req.params;
         // fetch the correct widget
@@ -196,7 +190,12 @@ const saveWidgetStyling = asyncHandler(async(req,res,next) => {
         }
         res.status(200).json({ message: "Widget updated" });
     } catch(err){
-        next({ statusCode: custom_statusCode || 500, title: custom_err_title || 'SERVER ERROR', message: custom_err_message, stack: err.stack });
+        next({ 
+            statusCode: custom_statusCode || 500, 
+            title: custom_err_title || 'SERVER ERROR', 
+            message: custom_err_message, 
+            stack: err.stack 
+        });
     }
 });
 

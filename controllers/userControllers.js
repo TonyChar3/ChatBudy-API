@@ -31,9 +31,9 @@ const registerUser = asyncHandler(async(req,res,next) => {
         }
         // generate a unique user hash
         const u_hash = await uniqueUserHash();
-        if(!u_hash){
+        if(u_hash.error){
             custom_statusCode = 500;
-            custom_err_message = 'Unable to generate a unique User hash';
+            custom_err_message = u_hash.error_msg;
             custom_err_title = 'SERVER ERROR';
         }
         // TODO: Remove comment for production

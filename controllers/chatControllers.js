@@ -105,10 +105,11 @@ const authForWS = asyncHandler(async(req,res,next) => {
         }
         // create another JWT with both the hash and id from the jwt and return it
         const ws_jwt = generateJWT(decode_jwt.id, user_hash, decode_jwt.id);
-        if(!ws_jwt){
+        if(ws_jwt.error){
             custom_statusCode = 500;
             custom_err_message = 'Unable to generate a token for a websocket connection';
             custom_err_title = 'SERVER ERROR';
+            throw new Error(`${ws_jwt.error_msg}`);
         }
         // verify the newly created JWT before sending it to the front-end
         const verify_ws_jwt = await decodeJWT(ws_jwt.jwtToken, 'WS');
@@ -116,6 +117,7 @@ const authForWS = asyncHandler(async(req,res,next) => {
             custom_statusCode = 400;
             custom_err_message = 'websocket connection token invalid';
             custom_err_title = 'VALIDATION ERROR';
+            throw new Error();
         }
         res.status(201).json({ wss_connection: ws_jwt.jwtToken });
     } catch(err){
@@ -139,10 +141,11 @@ const userAuthWS = asyncHandler(async(req,res,next) => {
         // verify firebase auth token
         await VerifyFirebaseToken(req, res);
         const ws_token = generateJWT(visitor_id, user_hash, user_hash);
-        if(!ws_token){
+        if(ws_token.error){
             custom_statusCode = 500;
             custom_err_message = 'Unable to generate a new token';
             custom_err_title = 'SERVER ERROR';
+            throw new Error(`${ws_token.error_msg}`);
         }
         // send back the JWT token
         res.status(201).send({ wss_jwt: ws_token.jwtToken});

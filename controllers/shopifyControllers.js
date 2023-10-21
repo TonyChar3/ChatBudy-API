@@ -27,6 +27,7 @@ const shopifyAuth = asyncHandler( async(req, res, next) => {
             custom_statusCode = 401;
             custom_err_message = 'Invalid shopify domain url';
             custom_err_title = 'UNAUTHORIZED';
+            throw new Error();
         } else {
             const apiKey = process.env.SHOPIFY_PUBLIC
             const redirectUri = process.env.HOST_NAME + '/shopify/callback'

@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.get('/visitor-info', visitorInfoFetch);
 
-router.post('/new-visitor-:id', createVisitor);
+router.post('/new-visitor-:user_hash', createVisitor);
 
 router.delete('/delete-visitor', deleteVisitor);
 
