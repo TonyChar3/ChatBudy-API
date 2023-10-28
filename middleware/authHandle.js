@@ -22,7 +22,16 @@ const VerifyFirebaseToken = async(req,res) => {
  */
 const VerifyUserHash = async(req,res) => {
     try{
-        const { user_hash } = req.params || req.body || req.body.data || req.params.id 
+        let user_hash;
+        if (req.params && req.params.user_hash) {
+            user_hash = req.params.user_hash;
+        } else if (req.body && req.body.user_hash) {
+            user_hash = req.body.user_hash;
+        } else if (req.body && req.body.data && req.body.data.user_hash) {
+            user_hash = req.body.data.user_hash;
+        } else if (req.params && req.params.id) {
+            user_hash = req.params.id; 
+        }
         const verify = await User.findOne({ user_access: user_hash });
         if(!verify){
             throw new Error('Invalid user hash')
