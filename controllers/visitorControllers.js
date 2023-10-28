@@ -9,10 +9,12 @@ import Chatroom from '../models/chatRoomModels.js';
 import User from '../models/userModels.js';
 import { sendAdminSSEInfo } from '../utils/manageSSE.js';
 import { redis_chatroom } from '../server.js';
+import { send } from '../utils/manageVisitors.js';
 dotenv.config();
 let custom_statusCode;
 let custom_err_message;
 let custom_err_title;
+const email_regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 //@desc To get the visitor info
 //@route GET /visitor/visitor-info
@@ -41,9 +43,12 @@ const visitorInfoFetch = asyncHandler( async(req,res,next) => {
 //@route POST /visitor/new-visitor
 //@access PRIVATE
 const createVisitor = asyncHandler(async(req,res,next) => {
-    // verify the user hash
-    await VerifyUserHash(req,res);
     try{
+        // verify the user hash
+        const verify = await VerifyUserHash(req,res);
+        if(!verify){
+            return;
+        }
         const { user_hash } = req.params 
         const { isoCode, browser } = req.body;
         const visitor_uid = generateRandomID(user_hash);
@@ -149,9 +154,12 @@ const createVisitor = asyncHandler(async(req,res,next) => {
 //@route DELETE /visitor/delete-visitor
 //@access PRIVATE
 const deleteVisitor = asyncHandler( async(req,res,next) => {
-    // verify the user hash
-    await VerifyUserHash(req,res);
     try{
+        // verify the user hash
+        const verify = await VerifyUserHash(req,res);
+        if(!verify){
+            return;
+        }
         // will need the user hash + the visitor _id
         const { user_hash, visitor_id } = req.body;
         // find the user
@@ -209,5 +217,52 @@ const deleteVisitor = asyncHandler( async(req,res,next) => {
         });
     }
 });
+//@desc send an email to the admin
+//@route POST /visitor/send-email
+//@access PRIVATE
+const sendEmail = asyncHandler( async(req,res,next) => {
+    try{
+        // verify the hash
+        const verify = await VerifyUserHash(req,res);
+        if(!verify){
+            return
+        }
+        // get the data from the body
+        const { from, to, content } = req.body 
+        // verify if it is a valid email
+        const verify_email = email_regex.test(from);
+        if(!verify_email){
+            custom_statusCode = 400
+            custom_err_title = 'VALIDATION ERROR'
+            custom_err_message = 'Invalid email address.'
+        }
+        // sanitize the data
+        const sanitize_from = from.replace(/<\/?[^>]+(>|$)/g, "");
+        const sanitize_to = to.replace(/<\/?[^>]+(>|$)/g, "");
+        const sanitize_content = content.replace(/<\/?[^>]+(>|$)/g, "");
 
-export { visitorInfoFetch, createVisitor, deleteVisitor }
+        const data = {
+            "from": `${sanitize_from}`,
+            "to": `${sanitize_to}`,
+            "subject": `Visitor ${sanitize_from}, has sent you an email`,
+            "text": `${sanitize_content}`
+        }
+        const response = await send(data);
+        if(!response){
+            custom_statusCode = 500
+            custom_err_title = 'SERVER ERROR'
+            custom_err_message = 'Failed to send email to the admin.'
+        }
+        res.status(200).send({ success: true, msg: 'email sent' });
+    } catch(err){
+        console.log(err)
+        next({ 
+            statusCode: custom_statusCode || 500, 
+            title: custom_err_title, 
+            message: custom_err_message, 
+            stack: err.stack 
+        });
+    }
+})
+
+export { visitorInfoFetch, createVisitor, deleteVisitor, sendEmail }

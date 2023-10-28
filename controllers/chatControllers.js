@@ -12,9 +12,12 @@ let custom_err_title;
 //@route GET /chat/new-room
 //@access PRIVATE
 const createChatRoom = asyncHandler(async(req,res,next) => { 
-    // verify the user hash
-    VerifyUserHash(req,res);
     try{
+        // verify the user hash
+        const verify = await VerifyUserHash(req,res);
+        if(!verify){
+            return;
+        }
         // get the user hash
         const { user_hash } = req.body;
         // decode the cookie and validate the JWT
@@ -80,9 +83,12 @@ const createChatRoom = asyncHandler(async(req,res,next) => {
 //@route POST /chat/auth-ws
 //@access PRIVATE
 const authForWS = asyncHandler(async(req,res,next) => {
-    // verify the user hash
-    VerifyUserHash(req,res);
     try{
+        // verify the user hash
+        const verify = await VerifyUserHash(req,res);
+        if(!verify){
+            return;
+        }
         // receive the user hash
         const { user_hash } = req.body
         // decode the cookie and validate the JWT
@@ -133,9 +139,12 @@ const authForWS = asyncHandler(async(req,res,next) => {
 //@route POST /chat/user-auth-ws
 //@access PRIVATE
 const userAuthWS = asyncHandler(async(req,res,next) => {
-    // verify the user hash
-    VerifyUserHash(req,res);
     try{
+        // verify the user hash
+        const verify = await VerifyUserHash(req,res);
+        if(!verify){
+            return;
+        }        
         // get both the user and visitor id from the Req
         const { visitor_id, user_hash } = req.body.data
         // verify firebase auth token

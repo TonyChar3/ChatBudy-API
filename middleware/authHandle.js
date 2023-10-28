@@ -23,14 +23,18 @@ const VerifyFirebaseToken = async(req,res) => {
 const VerifyUserHash = async(req,res) => {
     try{
         const { user_hash } = req.params || req.body || req.body.data || req.params.id 
-        await User.findOne({ user_access: user_hash });
-        return true;
+        const verify = await User.findOne({ user_access: user_hash });
+        if(!verify){
+            throw new Error('Invalid user hash')
+        }
+        return true
     } catch(err){
-        return res.status(401).json({
+        res.status(401).json({
             title: 'UNAUTHORIZED',
             message: 'Invalid user hash',
             stackTrace: err.stack
         });
+        return false;
     }
 }
 

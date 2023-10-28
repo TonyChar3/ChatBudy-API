@@ -19,7 +19,7 @@ import '@shopify/shopify-api/adapters/node';
 import {shopifyApi, LATEST_API_VERSION} from '@shopify/shopify-api';
 import redis from 'redis';
 import Constant from "./constants.js";
-
+import * as aws from '@aws-sdk/client-ses';
 /**
  * ChatBüdy project Nodejs + Express API
  * 
@@ -41,6 +41,18 @@ const credentials = JSON.parse(fs.readFileSync('./firebaseKey/salezy-4de15-fireb
 admin.initializeApp({
     credential: admin.credential.cert(credentials)
 });
+
+//config nodemailer
+const config_nodemailer = {
+    service: 'gmail',
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+    auth: {
+        user: process.env.NODEMAILER_EMAIL,
+        pass: process.env.NODEMAILER_PASSWORD
+    }
+}
 
 // use .env variables
 dotenv.config();
@@ -181,5 +193,5 @@ const server = app.listen(port, async() => {
     });
 });
 
-export { redis_rate_limit, redis_chatroom, redis_nonce_storage, shopify }
+export { redis_rate_limit, redis_chatroom, redis_nonce_storage, shopify, config_nodemailer }
 

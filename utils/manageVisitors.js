@@ -6,6 +6,8 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { sendAdminFreshUpdatedInfo, sendWidgetVisitorNotifications } from './manageSSE.js';
+import { config_nodemailer } from '../server.js';
+import nodemailer from 'nodemailer';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -382,6 +384,20 @@ const setVisitorData = async(visitor_collection) => {
     return
   }
 }
+/**
+ * Send email to the admin if he's offline
+ */
+const send = async(data) => {
+  const transporter = nodemailer.createTransport(config_nodemailer);
+  transporter.sendMail(data, (err, info) => {
+    if(err){
+      console.log(err)
+    } else {
+      console.log(info)
+      return info.response
+    }
+  })
+}
 
 export { 
   generateRandomID, 
@@ -396,4 +412,5 @@ export {
   sendVisitorNotification,
   clearVisitorNotifications,
   setBrowserData,
-  setVisitorData }
+  setVisitorData,
+  send }

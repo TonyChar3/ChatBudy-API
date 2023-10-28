@@ -10,6 +10,9 @@ const widgetSchema = mongoose.Schema({
         type: String,
         required: true
     },
+    shopify_domain: {
+        type: String
+    },
     customization: {
         position: {
             type: String
@@ -21,6 +24,9 @@ const widgetSchema = mongoose.Schema({
             type: String
         },
         greeting_message: {
+            type: String
+        },
+        offline_message: {
             type: String
         },
         admin_name: {

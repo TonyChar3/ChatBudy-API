@@ -65,6 +65,7 @@ const registerUser = asyncHandler(async(req,res,next) => {
                     position: "right",
                     shape: "square",
                     main_color: "#0c64f2",
+                    offline_message: "We are currently unavaible right now, please provide your email and we will get back to you as soon as possible 🙃!",
                     greeting_message: "Hi! Want to know about our special offer 👀?",
                     admin_name: "Support agent 🤖",
                     font_color: "light"
