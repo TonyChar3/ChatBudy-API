@@ -34,6 +34,9 @@ const widgetSchema = mongoose.Schema({
         },
         font_color: {
             type: String
+        },
+        chat_mode: {
+            type: String
         }
     },
     installed: {

@@ -60,12 +60,7 @@ export const webSocketServerSetUp = (redis_client, server) => {
     wss.on('connection',async(ws,req) => {
         ws["id"] = visitorID
         const ws_chatroom = chatrooms_map.get(visitorID)
-        const [admin_status, ask_email] = await Promise.all([
-            // get the admin connection status
-            adminLogInStatus(userHash),
-            // check if we need to ask for the email
-            askEmailForm(userHash, visitorID)
-        ]);
+        const ask_email = await askEmailForm(userHash, visitorID);
         const connect_user_array = wss_connections.get(visitorID) || [];
         connect_user_array.push({ id: user_type_login, ws: ws });// set a new connected user into the array
         wss_connections.set(visitorID, connect_user_array);
@@ -75,7 +70,6 @@ export const webSocketServerSetUp = (redis_client, server) => {
             if(!ask_email){
                 data_to_send = JSON.stringify({ type: 'ask-email', status: ask_email })
             } else {
-                data_to_send = JSON.stringify({ type: 'admin-status', status: admin_status })
                 data_to_send = JSON.stringify(ws_chatroom.messages)
             }
         } else if (user_type_login === userHash){

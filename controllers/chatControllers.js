@@ -3,7 +3,7 @@ import { decodeJWT, generateJWT } from '../utils/manageVisitors.js';
 import ChatRoom from '../models/chatRoomModels.js';
 import Visitor from '../models/visitorsModels.js';
 import { redis_chatroom } from '../server.js';
-import { VerifyUserHash, VerifyFirebaseToken } from "../middleware/authHandle.js";
+import { VerifyUserHash, VerifyFirebaseToken, VerifyWidgetToken } from "../middleware/authHandle.js";
 let custom_statusCode;
 let custom_err_message;
 let custom_err_title;
@@ -85,17 +85,12 @@ const createChatRoom = asyncHandler(async(req,res,next) => {
 const authForWS = asyncHandler(async(req,res,next) => {
     try{
         // verify the user hash
-        const verify = await VerifyUserHash(req,res);
+        const verify = await VerifyWidgetToken(req,res);
         if(!verify){
             return;
         }
         // receive the user hash
         const { user_hash } = req.body
-        // decode the cookie and validate the JWT
-        //TODO: Uncomment this for production to use httpOnly cookies
-        // const cookie_value = req.cookies
-        const cookie_value = req.headers.authorization.split(' ')[1]
-        const decode_jwt = await decodeJWT(cookie_value, 'Visitor');
         // make sure the visitor still exist or isnt closed by amdin
         const visitor_collection = await Visitor.findById(user_hash);
         if(!visitor_collection){
@@ -104,13 +99,13 @@ const authForWS = asyncHandler(async(req,res,next) => {
             custom_err_title = 'NOT FOUND';
         } 
         // verify if the visitor exist before doing anything
-        const verify_visitor = visitor_collection.visitor.findIndex(visitor => visitor._id.toString() === decode_jwt.id.toString())
+        const verify_visitor = visitor_collection.visitor.findIndex(visitor => visitor._id.toString() === verify.id.toString())
         if(verify_visitor === -1){
             res.send({ visitor_not_found: true });
             return;
         }
         // create another JWT with both the hash and id from the jwt and return it
-        const ws_jwt = generateJWT(decode_jwt.id, user_hash, decode_jwt.id);
+        const ws_jwt = generateJWT(verify.id, user_hash, verify.id);
         if(ws_jwt.error){
             custom_statusCode = 500;
             custom_err_message = 'Unable to generate a token for a websocket connection';
@@ -139,16 +134,11 @@ const authForWS = asyncHandler(async(req,res,next) => {
 //@route POST /chat/user-auth-ws
 //@access PRIVATE
 const userAuthWS = asyncHandler(async(req,res,next) => {
-    try{
-        // verify the user hash
-        const verify = await VerifyUserHash(req,res);
-        if(!verify){
-            return;
-        }        
+    try{    
+        // verify firebase auth token
+        await VerifyFirebaseToken(req, res);   
         // get both the user and visitor id from the Req
         const { visitor_id, user_hash } = req.body.data
-        // verify firebase auth token
-        await VerifyFirebaseToken(req, res);
         const ws_token = generateJWT(visitor_id, user_hash, user_hash);
         if(ws_token.error){
             custom_statusCode = 500;

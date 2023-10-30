@@ -2,7 +2,7 @@ import asyncHandler from 'express-async-handler';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import { getVisitorBrowser, generateJWT, generateRandomID, setBrowserData, setVisitorData } from '../utils/manageVisitors.js';
-import { VerifyUserHash } from '../middleware/authHandle.js';
+import { VerifyUserHash, VerifyWidgetToken, VerifyFirebaseToken } from '../middleware/authHandle.js';
 import { sendWsUserNotification } from '../utils/manageChatRoom.js';
 import Visitor from '../models/visitorsModels.js';
 import Chatroom from '../models/chatRoomModels.js';
@@ -155,11 +155,8 @@ const createVisitor = asyncHandler(async(req,res,next) => {
 //@access PRIVATE
 const deleteVisitor = asyncHandler( async(req,res,next) => {
     try{
-        // verify the user hash
-        const verify = await VerifyUserHash(req,res);
-        if(!verify){
-            return;
-        }
+        // verify the acces token
+        await VerifyFirebaseToken(req,res);
         // will need the user hash + the visitor _id
         const { user_hash, visitor_id } = req.body;
         // find the user
@@ -223,12 +220,14 @@ const deleteVisitor = asyncHandler( async(req,res,next) => {
 const sendEmail = asyncHandler( async(req,res,next) => {
     try{
         // verify the hash
-        const verify = await VerifyUserHash(req,res);
+        const verify = await VerifyWidgetToken(req,res);
         if(!verify){
             return
         }
+        // get the admin email
+        const user = await User.findOne({ user_access: req.params.user_hash });
         // get the data from the body
-        const { from, to, content } = req.body 
+        const { from, content } = req.body 
         // verify if it is a valid email
         const verify_email = email_regex.test(from);
         if(!verify_email){
@@ -238,14 +237,13 @@ const sendEmail = asyncHandler( async(req,res,next) => {
         }
         // sanitize the data
         const sanitize_from = from.replace(/<\/?[^>]+(>|$)/g, "");
-        const sanitize_to = to.replace(/<\/?[^>]+(>|$)/g, "");
         const sanitize_content = content.replace(/<\/?[^>]+(>|$)/g, "");
 
         const data = {
             "from": `${sanitize_from}`,
-            "to": `${sanitize_to}`,
+            "to": `${user.email}`,
             "subject": `Visitor ${sanitize_from}, has sent you an email`,
-            "text": `${sanitize_content}`
+            "text": `Hi, you received the following from your visitor ${sanitize_from}: ${sanitize_content}`
         }
         const response = await send(data);
         if(!response){

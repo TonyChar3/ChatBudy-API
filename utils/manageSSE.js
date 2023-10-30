@@ -43,6 +43,17 @@ const sendWidgetVisitorNotifications = (user_id, data) => {
     }
 }
 /**
+ * Send the admin offline - online status
+ */
+const sendWidgetAdminStatus = async(user_hash, user_id) => {
+    // get the admin status
+    const admin_status = await adminLogInStatus(user_hash);
+    const connection = sse_connections.get(user_id);
+    if(connection){
+        connection.write(`data:${JSON.stringify({ type: 'admin-status', data: admin_status })}\n\n`);
+    }
+}
+/**
  * Function to send the visitors array to the front-end
  */
 const fetchAllAdminVisitor = async(connected_user) => {
@@ -170,5 +181,6 @@ export {
     fetchAllAdminNotification, 
     fetchAdminAnalyticsData, 
     adminLogInStatus,
-    widgetInstallStatus
+    widgetInstallStatus,
+    sendWidgetAdminStatus
 }

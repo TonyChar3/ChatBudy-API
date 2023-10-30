@@ -1,6 +1,6 @@
 import admin from 'firebase-admin';
 import User from '../models/userModels.js';
-
+import { decodeJWT } from '../utils/manageVisitors.js';
 /**
  * Verify the token and return its content for use
  */
@@ -15,6 +15,37 @@ const VerifyFirebaseToken = async(req,res) => {
             message: 'Invalid auth token',
             stackTrace: err.stack
         });
+    }
+}
+/**
+ * Verify for access to the widget styling
+ */
+const VerifyAccessWidgetStyle = async(req,res) => {
+    const token = req.headers.authorization.split(" ")[1]
+    const decode_token = await decodeJWT(token, 'Visitor');
+    if(Object.keys(decode_token).length === 0){
+        await VerifyFirebaseToken(req,res);
+    }
+    return decode_token
+}
+/**
+ * Verify visitor widget token
+ */
+const VerifyWidgetToken = async(req,res) => {
+    try{
+        const token = req.headers.authorization.split(" ")[1]
+        const decode_token = await decodeJWT(token, 'Visitor');
+        if(Object.keys(decode_token).length === 0){
+            throw new Error('Invalid auth token');
+        }
+        return decode_token
+    } catch(err){
+        res.status(401).json({
+            title: 'UNAUTHORIZED',
+            message: 'Invalid auth token',
+            stackTrace: err.stack
+        });
+        return false;
     }
 }
 /**
@@ -47,4 +78,4 @@ const VerifyUserHash = async(req,res) => {
     }
 }
 
-export { VerifyFirebaseToken, VerifyUserHash }
+export { VerifyFirebaseToken, VerifyUserHash, VerifyWidgetToken, VerifyAccessWidgetStyle }

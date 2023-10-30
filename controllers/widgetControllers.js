@@ -2,8 +2,8 @@ import asyncHandler from 'express-async-handler';
 import Widget from '../models/widgetModels.js';
 import User from '../models/userModels.js';
 import { visitorSSEAuth, sendVisitorNotification, clearVisitorNotifications } from '../utils/manageVisitors.js';
-import { widgetInstallStatus } from '../utils/manageSSE.js';
-import { VerifyFirebaseToken, VerifyUserHash } from '../middleware/authHandle.js';
+import { widgetInstallStatus, sendWidgetAdminStatus } from '../utils/manageSSE.js';
+import { VerifyFirebaseToken, VerifyUserHash, VerifyWidgetToken, VerifyAccessWidgetStyle } from '../middleware/authHandle.js';
 import dotenv from 'dotenv';
 import axios from 'axios';
 dotenv.config();
@@ -119,6 +119,7 @@ const widgetSSEConnection = asyncHandler(async(req,res,next) => {
             // send the updates
             sse_connections.set(connect_sse.id, res);
             sendVisitorNotification(connect_sse.user_access, connect_sse.id);
+            sendWidgetAdminStatus(connect_sse.user_access, connect_sse.id);
             // clean up if the connection is closed or if an error occurs
             res.on("error", (error) => {
                 custom_err_message = `${error.message}`
@@ -146,8 +147,11 @@ const widgetSSEConnection = asyncHandler(async(req,res,next) => {
 //@access PUBLIC
 const widgetStyling = asyncHandler(async(req,res,next) => {
     try{
-        // verify user hash
-        await VerifyUserHash(req,res);
+        // verify for visitor token
+        const verify = await VerifyAccessWidgetStyle(req,res);
+        if(!verify){
+            return
+        }
         // get the user_hash
         const { user_hash } = req.params;
         // fetch the correct widget
@@ -157,7 +161,10 @@ const widgetStyling = asyncHandler(async(req,res,next) => {
             custom_err_title = 'NOT FOUND';
         }
         // send the object back to the  front-end
-        res.status(200).send({ widget_style: widget_collection.customization });
+        res.status(200).send({ 
+            widget_chat_mode: widget_collection.chat_mode, 
+            widget_style: widget_collection.customization 
+        });
     } catch(err){
         next({ statusCode: 500, title: custom_err_title, message: custom_err_message, stack: err.stack });
     }
