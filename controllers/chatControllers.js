@@ -3,7 +3,7 @@ import { decodeJWT, generateJWT } from '../utils/manageVisitors.js';
 import ChatRoom from '../models/chatRoomModels.js';
 import Visitor from '../models/visitorsModels.js';
 import { redis_chatroom } from '../server.js';
-import { VerifyUserHash, VerifyFirebaseToken, VerifyWidgetToken } from "../middleware/authHandle.js";
+import { VerifyFirebaseToken, VerifyWidgetToken } from "../middleware/authHandle.js";
 let custom_statusCode;
 let custom_err_message;
 let custom_err_title;
@@ -14,7 +14,7 @@ let custom_err_title;
 const createChatRoom = asyncHandler(async(req,res,next) => { 
     try{
         // verify the user hash
-        const verify = await VerifyUserHash(req,res);
+        const verify = await VerifyWidgetToken(req,res);
         if(!verify){
             return;
         }

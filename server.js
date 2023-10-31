@@ -19,7 +19,6 @@ import '@shopify/shopify-api/adapters/node';
 import {shopifyApi, LATEST_API_VERSION} from '@shopify/shopify-api';
 import redis from 'redis';
 import Constant from "./constants.js";
-import * as aws from '@aws-sdk/client-ses';
 /**
  * ChatBüdy project Nodejs + Express API
  * 
@@ -37,7 +36,7 @@ const shopify = shopifyApi({
 });
 
 // initate Firebase Admin SDK
-const credentials = JSON.parse(fs.readFileSync('./firebaseKey/salezy-4de15-firebase-adminsdk-vql86-b2b376decd.json'))
+const credentials = JSON.parse(fs.readFileSync('./salezy-4de15-firebase-adminsdk-vql86-b2b376decd.json'))
 admin.initializeApp({
     credential: admin.credential.cert(credentials)
 });
