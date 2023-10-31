@@ -200,7 +200,6 @@ const decodeJWT = async(token, type_name) => {
       return false
     }
   } catch(err){
-    console.log('ERROR decodeJWT(): ', err);
     return {}
   }
 }
