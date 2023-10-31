@@ -137,8 +137,8 @@ const createVisitor = asyncHandler(async(req,res,next) => {
             custom_err_title = 'SERVER ERROR';
         }
         // TODO: Uncomment this for production
-        res.cookie('visitor_jwt', generate_token, { maxAge: 48 * 60 * 60 * 1000, httpOnly: false, sameSite: false })
-        // res.send({ visitorToken: generate_token });
+        res.status(200).cookie('visitor_jwt', generate_token, { maxAge: 48 * 60 * 60 * 1000, httpOnly: true, sameSite: 'none', secure: true })
+        res.send({ message: 'new visitor '});
     } catch(err) {
         next({ 
             statusCode: custom_statusCode || 500, 

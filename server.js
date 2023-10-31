@@ -80,12 +80,11 @@ const app = express();
 const port = process.env.PORT || 8000
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
+app.use(cookieParser());
 // enable CORS
 app.use(cors(corsOptions));
 // Security purposes
 app.use(helmet());
-app.use(cookieParser());
 
 // User routes
 app.use('/user', userRoutes);
