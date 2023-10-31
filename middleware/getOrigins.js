@@ -17,7 +17,6 @@ const AllowedDomainVerification = async() => {
 const corsOptions = async(req,callback ) => {
     try{
         const allowedOrigins = await AllowedDomainVerification();
-        console.log(req.header('Origin'));
         const origin = req.header('Origin');
         if(allowedOrigins){
             const matchingOrigin = allowedOrigins.find((allowedOrigin) => {
