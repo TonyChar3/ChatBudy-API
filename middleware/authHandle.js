@@ -1,5 +1,6 @@
 import admin from 'firebase-admin';
 import User from '../models/userModels.js';
+import Widget from '../models/widgetModels.js';
 import { decodeJWT } from '../utils/manageVisitors.js';
 /**
  * Verify the token and return its content for use
@@ -77,5 +78,26 @@ const VerifyUserHash = async(req,res) => {
         return false;
     }
 }
+/**
+ * Verify the origin  header if the origin is allowed
+ */
+const VerifyOriginHeader = async(req,res) => {
+    try{
+        const origin = req.headers.origin;
+        // check if the origin exist in the Widget collection
+        const verify_origin = await Widget.findOne({ domain: origin });
+        if(verify_origin === null){
+            throw new Error('Invalid origin');
+        }
+        return origin;
+    } catch(err){
+        res.status(401).json({
+            title: 'UNAUTHORIZED',
+            message: 'Invalid origin',
+            stackTrace: err.stack
+        });
+        return false;
+    }
+}
 
-export { VerifyFirebaseToken, VerifyUserHash, VerifyWidgetToken, VerifyAccessWidgetStyle }
+export { VerifyFirebaseToken, VerifyUserHash, VerifyWidgetToken, VerifyAccessWidgetStyle, VerifyOriginHeader }

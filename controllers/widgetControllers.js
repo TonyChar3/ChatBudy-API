@@ -3,7 +3,7 @@ import Widget from '../models/widgetModels.js';
 import User from '../models/userModels.js';
 import { visitorSSEAuth, sendVisitorNotification, clearVisitorNotifications } from '../utils/manageVisitors.js';
 import { widgetInstallStatus, sendWidgetAdminStatus } from '../utils/manageSSE.js';
-import { VerifyFirebaseToken, VerifyUserHash, VerifyWidgetToken, VerifyAccessWidgetStyle } from '../middleware/authHandle.js';
+import { VerifyFirebaseToken, VerifyUserHash, VerifyWidgetToken, VerifyAccessWidgetStyle, VerifyOriginHeader } from '../middleware/authHandle.js';
 import dotenv from 'dotenv';
 import axios from 'axios';
 dotenv.config();
@@ -64,7 +64,7 @@ const widgetCustomLink = asyncHandler(async(req,res,next) => {
             custom_err_message = 'User data not found';
             custom_err_title = 'NOT FOUND';
         }
-        res.status(200).json({ link: `<script type="module" src="http://localhost:8080/code/${user.user_access}" async></script>`})
+        res.status(200).json({ link: `<script type="module" src="${process.env.HOST_NAME}/code/${user.user_access}" async></script>`})
 
     } catch(err){
         next({ 
@@ -81,7 +81,10 @@ const widgetCustomLink = asyncHandler(async(req,res,next) => {
 const widgetSSEAuth = asyncHandler( async(req,res,next) => {
     try{
         // verify the hash
-        await VerifyUserHash(req,res);
+        const verify = await VerifyWidgetToken(req,res);
+        if(!verify){
+            return;
+        }
         // authenticate the visitor before setting up the SSE connection
         const auth_visitor = await visitorSSEAuth(req);
         if(!Object.keys(auth_visitor).length === 0){
@@ -110,11 +113,15 @@ const widgetSSEAuth = asyncHandler( async(req,res,next) => {
 const widgetSSEConnection = asyncHandler(async(req,res,next) => {
     try{
         if(connect_sse){
+            const verified_origin = await VerifyOriginHeader(req,res);
+            if(!verified_origin){
+                return;
+            }
             // Set up the SSE headers
             res.setHeader('Content-Type', 'text/event-stream');
             res.setHeader('Cache-Control', 'no-cache');
             res.setHeader('Connection', 'keep-alive');
-            res.setHeader('Access-Control-Allow-Origin', 'http://127.0.0.1:3000');  
+            res.setHeader('Access-Control-Allow-Origin', verified_origin);  
             res.write('SSE connection started\n\n');
             // send the updates
             sse_connections.set(connect_sse.id, res);
