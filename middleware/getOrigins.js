@@ -4,7 +4,7 @@ import Widget from '../models/widgetModels.js';
  */
 const AllowedDomainVerification = async() => {
     try{ 
-        const  domains = await Widget.distinct('domain');
+        const domains = await Widget.distinct('domain');
         return domains
     } catch(err){
         console.log(err)
@@ -17,7 +17,7 @@ const AllowedDomainVerification = async() => {
 const corsOptions = async(req,callback ) => {
     try{
         const allowedOrigins = await AllowedDomainVerification();
-        console.log(req)
+        console.log(req.header('Origin'));
         const origin = req.header('Origin');
         if(allowedOrigins){
             const matchingOrigin = allowedOrigins.find((allowedOrigin) => {
