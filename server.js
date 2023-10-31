@@ -59,25 +59,22 @@ dotenv.config();
 // connect our MongoDB cluster
 connectDB();
 
-// Connect Redis and set up mutliple clients
-const REDIS_PORT = process.env.REDIS_PORT
-const REDIS_HOST = process.env.REDIS_HOST
 // cache chatrooms
 const redis_chatroom = redis.createClient({
-    host: REDIS_HOST,
-    port: REDIS_PORT,
+    host: process.env.REDIS_HOST,
+    port: process.env.REDIS_PORT,
     database: 0
 });
 // cache rate_limit count
 const redis_rate_limit = redis.createClient({
-    host: REDIS_HOST,
-    port: REDIS_PORT,
+    host: process.env.REDIS_HOST,
+    port: process.env.REDIS_PORT,
     database: 1
 });
 // cache shopify nonce 
 const redis_nonce_storage = redis.createClient({
-    host: REDIS_HOST,
-    port: REDIS_PORT,
+    host: process.env.REDIS_HOST,
+    port: process.env.REDIS_PORT,
     database: 2
 });
 
