@@ -1,4 +1,4 @@
-import { VerifyOriginHeader } from "./authHandle";
+import { VerifyOriginHeader } from "./authHandle.js";
 
 /**
  * Function to set the cors middleware options
