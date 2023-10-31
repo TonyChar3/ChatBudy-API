@@ -125,7 +125,6 @@ const createVisitor = asyncHandler(async(req,res,next) => {
         // notify the user
         const notify_ws_user = sendWsUserNotification("admin", user_hash, visitor_uid, { sent_from: "Admin", title: "New visitor", content: `${visitor_uid} is visiting` });
         if(notify_ws_user.error){
-            console.log(notify_ws_user);
             custom_statusCode = 500;
             custom_err_message = 'Unable to notify the offline user';
             custom_err_title = 'SERVER ERROR';
@@ -133,13 +132,12 @@ const createVisitor = asyncHandler(async(req,res,next) => {
         // generate a new JWT token for the visitor
         const generate_token = generateJWT(visitor_uid);
         if(generate_token.error){
-            console.log(generate_token);
             custom_statusCode = 500;
             custom_err_message = 'Unable to generate a new visitor auth token';
             custom_err_title = 'SERVER ERROR';
         }
         // TODO: Uncomment this for production
-        res.cookie('visitor_jwt', generate_token, { maxAge: 48 * 60 * 60 * 1000, httpOnly:true, sameSite: 'none', secure: true })
+        res.cookie('visitor_jwt', generate_token, { maxAge: 48 * 60 * 60 * 1000, httpOnly: false, sameSite: false })
         // res.send({ visitorToken: generate_token });
     } catch(err) {
         next({ 
