@@ -20,16 +20,6 @@ const createChatRoom = asyncHandler(async(req,res,next) => {
         }
         // get the user hash
         const { user_hash } = req.body;
-        // decode the cookie and validate the JWT
-        // TODO: uncomment for production
-        // const cookie_value = req.cookies
-        const cookie_value = req.headers.authorization.split(' ')[1]
-        const decoded = await decodeJWT(cookie_value, 'Visitor');
-        if(!decoded){
-            custom_statusCode = 400;
-            custom_err_message = 'Invalid token';
-            custom_err_title = 'VALIDATION ERROR';
-        }
         // fetch the chatroom collection
         const chatroom_collection = await ChatRoom.findById(user_hash);
         if(!chatroom_collection){
@@ -44,14 +34,14 @@ const createChatRoom = asyncHandler(async(req,res,next) => {
                     chat_rooms: {
                         $each: [
                             {
-                                visitor: decoded.id
+                                visitor: verify.id
                             }
                         ],
                         $position: 0
                     }
                 }
             }),
-            redis_chatroom.set(decoded.id, JSON.stringify({ visitor: decoded.id, messages: [] }), "EX", 3600)
+            redis_chatroom.set(verify.id, JSON.stringify({ visitor: verify.id, messages: [] }), "EX", 3600)
         ])
         if(!add_chatroom || !cache_chatroom){
             switch (!add_chatroom || !cache_chatroom){

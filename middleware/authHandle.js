@@ -22,7 +22,8 @@ const VerifyFirebaseToken = async(req,res) => {
  * Verify for access to the widget styling
  */
 const VerifyAccessWidgetStyle = async(req,res) => {
-    const token = req.headers.authorization.split(" ")[1]
+    // const token = req.headers.authorization.split(" ")[1]
+    const token = req.cookies;
     const decode_token = await decodeJWT(token, 'Visitor');
     if(Object.keys(decode_token).length === 0){
         await VerifyFirebaseToken(req,res);
@@ -34,7 +35,8 @@ const VerifyAccessWidgetStyle = async(req,res) => {
  */
 const VerifyWidgetToken = async(req,res) => {
     try{
-        const token = req.headers.authorization.split(" ")[1]
+        // const token = req.headers.authorization.split(" ")[1]
+        const token = req.cookies;
         const decode_token = await decodeJWT(token, 'Visitor');
         if(Object.keys(decode_token).length === 0){
             throw new Error('Invalid auth token');
