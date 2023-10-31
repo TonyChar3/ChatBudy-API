@@ -2,7 +2,6 @@ import { WebSocketServer } from 'ws';
 import { decodeJWT, setVisitorEmail } from '../utils/manageVisitors.js';
 import { saveChat, checkAndSetWSchatRoom, sendWsUserNotification, cacheSentChat, askEmailForm, setConversionRate } from '../utils/manageChatRoom.js';
 import dotenv from 'dotenv';
-import { adminLogInStatus } from '../utils/manageSSE.js';
 
 dotenv.config();
 
@@ -20,7 +19,7 @@ export const webSocketServerSetUp = (redis_client, server) => {
 
     server.on('upgrade', async(req, socket, head) => {
         try{
-            const jwt_connect = new URL(req.url, 'http://localhost:8080').searchParams.get('id');
+            const jwt_connect = new URL(req.url, process.env.HOST_NAME).searchParams.get('id');
             const decode_token = await decodeJWT(jwt_connect, 'WS');
             // Decode the sent JWT and check if the data inside is valid
             if(!decode_token.id || !decode_token.userHash) {
