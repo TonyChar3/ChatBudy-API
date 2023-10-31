@@ -61,21 +61,22 @@ connectDB();
 
 // Connect Redis and set up mutliple clients
 const REDIS_PORT = process.env.REDIS_PORT
+const REDIS_HOST = process.env.REDIS_HOST
 // cache chatrooms
 const redis_chatroom = redis.createClient({
-    host: '127.0.0.1',
+    host: REDIS_HOST,
     port: REDIS_PORT,
     database: 0
 });
 // cache rate_limit count
 const redis_rate_limit = redis.createClient({
-    host: '127.0.0.1',
+    host: REDIS_HOST,
     port: REDIS_PORT,
     database: 1
 });
 // cache shopify nonce 
 const redis_nonce_storage = redis.createClient({
-    host: '127.0.0.1',
+    host: REDIS_HOST,
     port: REDIS_PORT,
     database: 2
 });
