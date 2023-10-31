@@ -61,20 +61,17 @@ connectDB();
 
 // cache chatrooms
 const redis_chatroom = redis.createClient({
-    host: process.env.REDIS_HOST,
-    port: process.env.REDIS_PORT,
+    url: process.env.REDIS_URL_CONNECT,
     database: 0
 });
 // cache rate_limit count
 const redis_rate_limit = redis.createClient({
-    host: process.env.REDIS_HOST,
-    port: process.env.REDIS_PORT,
+    url: process.env.REDIS_URL_CONNECT,
     database: 1
 });
 // cache shopify nonce 
 const redis_nonce_storage = redis.createClient({
-    host: process.env.REDIS_HOST,
-    port: process.env.REDIS_PORT,
+    url: process.env.REDIS_URL_CONNECT,
     database: 2
 });
 
