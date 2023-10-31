@@ -113,15 +113,12 @@ const widgetSSEAuth = asyncHandler( async(req,res,next) => {
 const widgetSSEConnection = asyncHandler(async(req,res,next) => {
     try{
         if(connect_sse){
-            const verified_origin = await VerifyOriginHeader(req,res);
-            if(!verified_origin){
-                return;
-            }
+            const origin = req.headers('Origin');
             // Set up the SSE headers
             res.setHeader('Content-Type', 'text/event-stream');
             res.setHeader('Cache-Control', 'no-cache');
             res.setHeader('Connection', 'keep-alive');
-            res.setHeader('Access-Control-Allow-Origin', verified_origin);  
+            res.setHeader('Access-Control-Allow-Origin', origin);  
             res.write('SSE connection started\n\n');
             // send the updates
             sse_connections.set(connect_sse.id, res);
