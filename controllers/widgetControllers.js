@@ -112,32 +112,34 @@ const widgetSSEAuth = asyncHandler( async(req,res,next) => {
 // TODO: Add a dynamic Access-Control-Allow-Origin domain for production
 const widgetSSEConnection = asyncHandler(async(req,res,next) => {
     try{
-        if(Object.keys(connect_sse).length > 0){
-            const origin = req.headers('Origin');
-            console.log('SSE widhet', origin)
-            // Set up the SSE headers
-            res.setHeader('Content-Type', 'text/event-stream');
-            res.setHeader('Cache-Control', 'no-cache');
-            res.setHeader('Connection', 'keep-alive');
-            res.setHeader('Access-Control-Allow-Origin', '*');  
-            res.write('SSE connection started\n\n');
-            // send the updates
-            sse_connections.set(connect_sse.id, res);
-            sendVisitorNotification(connect_sse.user_access, connect_sse.id);
-            sendWidgetAdminStatus(connect_sse.user_access, connect_sse.id);
-            // clean up if the connection is closed or if an error occurs
-            res.on("error", (error) => {
-                custom_err_message = `${error.message}`
-                sse_connections.delete(connect_sse.id);// delete the connected user
-            });
-                
-            res.on('close', () => {
-                if(sse_connections.get(connect_sse.id)){
-                    clearVisitorNotifications(connect_sse.user_access, connect_sse.id);
-                    sse_connections.delete(connect_sse.id);// delete the connected user
-                }
-            });
+        if(!connect_sse){
+            console.log('error connect sse')
+            console.log(connect_sse)
         }
+        const origin = req.headers('Origin');
+        // Set up the SSE headers
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('Access-Control-Allow-Origin', origin);  
+        res.write('SSE connection started\n\n');
+        // send the updates
+        sse_connections.set(connect_sse.id, res);
+        sendVisitorNotification(connect_sse.user_access, connect_sse.id);
+        sendWidgetAdminStatus(connect_sse.user_access, connect_sse.id);
+        // clean up if the connection is closed or if an error occurs
+        res.on("error", (error) => {
+            custom_err_message = `${error.message}`
+            console.log(error)
+            sse_connections.delete(connect_sse.id);// delete the connected user
+        });
+            
+        res.on('close', () => {
+            if(sse_connections.get(connect_sse.id)){
+                clearVisitorNotifications(connect_sse.user_access, connect_sse.id);
+                sse_connections.delete(connect_sse.id);// delete the connected user
+            }
+        });
     } catch(err){
         next({ 
             statusCode: custom_statusCode || 500, 
