@@ -112,6 +112,7 @@ const authForWS = asyncHandler(async(req,res,next) => {
         }
         res.status(201).json({ wss_connection: ws_jwt.jwtToken });
     } catch(err){
+        console.log(err)
         next({ 
             statusCode: custom_statusCode || 500, 
             title: custom_err_title || 'SERVER ERROR', 
