@@ -114,6 +114,7 @@ const widgetSSEConnection = asyncHandler(async(req,res,next) => {
     try{
         if(connect_sse){
             const origin = req.headers('Origin');
+            console.log('SSE widhet', origin)
             // Set up the SSE headers
             res.setHeader('Content-Type', 'text/event-stream');
             res.setHeader('Cache-Control', 'no-cache');
