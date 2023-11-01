@@ -267,7 +267,7 @@ const visitorSSEAuth = async(req) => {
       // decode the cookie and validate the JWT
       //TODO: Uncomment this for production to use httpOnly cookies
       // const cookie_value = req.cookies
-      const cookie_value = req.headers.authorization.split(' ')[1]
+      const cookie_value = req.cookies.visitor_jwt.jwtToken;
       if(!cookie_value){
         return
       }
