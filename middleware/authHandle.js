@@ -36,8 +36,7 @@ const VerifyAccessWidgetStyle = async(req,res) => {
 const VerifyWidgetToken = async(req,res) => {
     try{
         // const token = req.headers.authorization.split(" ")[1]
-        const token = req.cookies;
-        console.log('token',req)
+        const token = req.cookies.visitor_jwt.jwtToken;
         const decode_token = await decodeJWT(token, 'Visitor');
         if(Object.keys(decode_token).length === 0){
             throw new Error('Invalid auth token');
