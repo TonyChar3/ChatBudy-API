@@ -22,10 +22,9 @@ const VerifyFirebaseToken = async(req,res) => {
  * Verify for access to the widget styling
  */
 const VerifyAccessWidgetStyle = async(req,res) => {
-    // const token = req.headers.authorization.split(" ")[1]
-    const token = req.cookies.visitor_jwt.jwtToken;
+    const token = req.cookies.visitor_jwt.jwtToken || req.headers.authorization.split(" ")[1];
     const decode_token = await decodeJWT(token, 'Visitor');
-    if(Object.keys(decode_token).length === 0 || !decode_token || !token){
+    if(Object.keys(decode_token).length === 0 || !decode_token){
         await VerifyFirebaseToken(req,res);
     }
     return decode_token
