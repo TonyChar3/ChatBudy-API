@@ -5,6 +5,7 @@ import Widget from '../models/widgetModels.js';
 const AllowedDomainVerification = async() => {
     try{ 
         const domains = await Widget.distinct('domain');
+        domains.push('http://localhost:5173');// allow access to the admin panel as well
         return domains
     } catch(err){
         console.log(err)
