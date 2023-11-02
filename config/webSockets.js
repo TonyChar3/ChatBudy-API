@@ -32,7 +32,10 @@ export const webSocketServerSetUp = (redis_client, server) => {
             visitorID = decode_token.id
             user_type_login = decode_token.logIN
             // check the cache and set the chatroom
-            const check_for_chatroom = await checkAndSetWSchatRoom("Visitor_chat", redis_client, visitorID, userHash, chatrooms_map);
+            const check_for_chatroom = await checkAndSetWSchatRoom("Visitor_chat", redis_client, visitorID, userHash);
+            if(!chatrooms_map.get(visitorID)){
+                chatrooms_map.set(check_for_chatroom.visitor_id, JSON.parse(check_for_chatroom.chat_room));
+            }
             if(check_for_chatroom.error){
                 console.log(check_for_chatroom.error_msg);
                 socket.write('HTTP/1.1 404 Chatroom Not found\r\n\r\n');
