@@ -28,6 +28,7 @@ const createChatRoom = asyncHandler(async(req,res,next) => {
             custom_err_message = 'Chatroom data not found';
             custom_err_title = 'NOT FOUND';
         }
+        console.log('create new chatroom colelction: ', chatroom_collection);
         // add it to the array and cache it
         const [add_chatroom, cache_chatroom] = await Promise.all([
             chatroom_collection.updateOne({
@@ -44,6 +45,7 @@ const createChatRoom = asyncHandler(async(req,res,next) => {
             }),
             redis_chatroom.set(verify.id, JSON.stringify({ visitor: verify.id, messages: [] }), "EX", 3600)
         ])
+        console.log('db save chatroom result', add_chatroom);
         if(!add_chatroom || !cache_chatroom){
             switch (!add_chatroom || !cache_chatroom){
                 case !add_chatroom:
