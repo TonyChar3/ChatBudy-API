@@ -33,7 +33,6 @@ export const webSocketServerSetUp = (redis_client, server) => {
             user_type_login = decode_token.logIN
             // check the cache and set the chatroom
             const check_for_chatroom = await checkAndSetWSchatRoom("Visitor_chat", redis_client, visitorID, userHash);
-            console.log('chatroom fetch and check', check_for_chatroom)
             if(!chatrooms_map.get(visitorID)){
                 chatrooms_map.set(check_for_chatroom.visitor_id, check_for_chatroom.chat_room);
             }
@@ -67,11 +66,6 @@ export const webSocketServerSetUp = (redis_client, server) => {
         const connect_user_array = wss_connections.get(visitorID) || [];
         connect_user_array.push({ id: user_type_login, ws: ws });// set a new connected user into the array
         wss_connections.set(visitorID, connect_user_array);
-
-        console.log('connection map for chatrooms', ws_chatroom);
-        console.log('wss_connections', wss_connections);
-        console.log('visitor id', visitorID);
-        console.log('admin id', userHash);
 
         if(user_type_login === visitorID){
             // check if the visitor email is set
