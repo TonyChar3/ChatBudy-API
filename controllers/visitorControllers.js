@@ -49,6 +49,7 @@ const createVisitor = asyncHandler(async(req,res,next) => {
         if(!verify){
             return;
         }
+        console.log('creating visitor httpOnly cookie: ', verify)
         const { user_hash } = req.params 
         const { isoCode, browser } = req.body;
         const visitor_uid = generateRandomID(user_hash);
