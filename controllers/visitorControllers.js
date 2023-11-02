@@ -49,9 +49,7 @@ const createVisitor = asyncHandler(async(req,res,next) => {
         if(!verify){
             return;
         }
-        console.log('creating visitor httpOnly cookie: ', verify)
         const { user_hash } = req.params 
-        console.log('create visitor user hash', user_hash)
         const { isoCode, browser } = req.body;
         const visitor_uid = generateRandomID(user_hash);
         const visitor_browser = getVisitorBrowser(browser);
@@ -59,32 +57,31 @@ const createVisitor = asyncHandler(async(req,res,next) => {
             Visitor.findById(user_hash),
             User.findOne({ user_access: user_hash })
         ]);
-        if(!visitor || !visitor_browser || !visitor_uid || !user){
-            const error_variable = !visitor || !visitor_browser || visitor_uid.error || !user;
-            switch (error_variable){
-                case !visitor:
-                    custom_statusCode = 404;
-                    custom_err_message = 'Visitor data not found';
-                    custom_err_title = 'NOT FOUND';
-                    break;
-                case !visitor_browser:
-                    custom_statusCode = 404;
-                    custom_err_message = 'Visitor browser not set correctly';
-                    custom_err_title = 'NOT FOUND';
-                    break;
-                case visitor_uid.error:
-                    custom_statusCode = 500;
-                    custom_err_message = visitor_uid.error_msg;
-                    custom_err_title = 'SERVER ERROR';
-                    break;
-                case !user:
-                    custom_statusCode = 404;
-                    custom_err_message = 'User data not found';
-                    custom_err_title = 'NOT FOUND';
-                default:
-                    break;
-            }
+        // if one fails set an error message
+        switch (!visitor || !visitor_browser || visitor_uid.error || !user){
+            case !visitor:
+                custom_statusCode = 404;
+                custom_err_message = 'Visitor data not found';
+                custom_err_title = 'NOT FOUND';
+                break;
+            case !visitor_browser:
+                custom_statusCode = 404;
+                custom_err_message = 'Visitor browser not set correctly';
+                custom_err_title = 'NOT FOUND';
+                break;
+            case visitor_uid.error:
+                custom_statusCode = 500;
+                custom_err_message = visitor_uid.error_msg;
+                custom_err_title = 'SERVER ERROR';
+                break;
+            case !user:
+                custom_statusCode = 404;
+                custom_err_message = 'User data not found';
+                custom_err_title = 'NOT FOUND';
+            default:
+                break;
         }
+
         // increment visitorData count
         setVisitorData(visitor);
         // increment browserData count

@@ -18,7 +18,6 @@ const createChatRoom = asyncHandler(async(req,res,next) => {
         if(!verify){
             return;
         }
-        console.log('received cookie htpONly createChatRoom: ', verify);
         // get the user hash
         const { user_hash } = req.body;
         // fetch the chatroom collection
@@ -28,7 +27,6 @@ const createChatRoom = asyncHandler(async(req,res,next) => {
             custom_err_message = 'Chatroom data not found';
             custom_err_title = 'NOT FOUND';
         }
-        console.log('create new chatroom colelction: ', chatroom_collection);
         // add it to the array and cache it
         const [add_chatroom, cache_chatroom] = await Promise.all([
             chatroom_collection.updateOne({
@@ -45,22 +43,20 @@ const createChatRoom = asyncHandler(async(req,res,next) => {
             }),
             redis_chatroom.set(verify.id, JSON.stringify({ visitor: verify.id, messages: [] }), "EX", 3600)
         ])
-        console.log('db save chatroom result', add_chatroom);
-        if(!add_chatroom || !cache_chatroom){
-            switch (!add_chatroom || !cache_chatroom){
-                case !add_chatroom:
-                    custom_statusCode = 500;
-                    custom_err_message = 'Unable to create a new chatroom';
-                    custom_err_title = 'SERVER ERROR';
-                    break;
-                case !cache_chatroom:
-                    custom_statusCode = 500;
-                    custom_err_message = 'Unable to cache the new chatroom';
-                    custom_err_title = 'SERVER ERROR';
-                    break;
-                default:
-                    break;
-            }
+        // one fails set an error message
+        switch (!add_chatroom || !cache_chatroom){
+            case !add_chatroom:
+                custom_statusCode = 500;
+                custom_err_message = 'Unable to create a new chatroom';
+                custom_err_title = 'SERVER ERROR';
+                break;
+            case !cache_chatroom:
+                custom_statusCode = 500;
+                custom_err_message = 'Unable to cache the new chatroom';
+                custom_err_title = 'SERVER ERROR';
+                break;
+            default:
+                break;
         }
         res.status(201).json({ message: "New room created" });
     } catch(err){

@@ -155,10 +155,8 @@ const checkAndSetWSchatRoom = async(cache_key_name, redis_client, visitor_id, us
             const room_index = chat_room_collection.chat_rooms.findIndex(rooms => rooms.visitor === visitor_id.toString());
             // verify the cache
             await verifyCache(cache_key_name,redis_client, visitor_id, chat_room_collection.chat_rooms[room_index]);
-            console.log('was not cached: ', chat_room_collection.chat_rooms[room_index])
             return { visitor_id: visitor_id, chat_room: chat_room_collection.chat_rooms[room_index] }
         }
-        console.log('was cached: ', chat_room_cache)
         return { visitor_id: visitor_id, chat_room: JSON.parse(chat_room_cache) }
     } catch(err){
         console.log('checkAndSetWSchatRoom() at manageChatRoom.js in utils: Unable to check and set a new chatroom for the websocket connection.', err.stack);
