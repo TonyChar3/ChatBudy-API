@@ -3,7 +3,7 @@ import Widget from '../models/widgetModels.js';
 import User from '../models/userModels.js';
 import { visitorSSEAuth, sendVisitorNotification, clearVisitorNotifications } from '../utils/manageVisitors.js';
 import { widgetInstallStatus, sendWidgetAdminStatus } from '../utils/manageSSE.js';
-import { VerifyFirebaseToken, VerifyUserHash, VerifyWidgetToken, VerifyAccessWidgetStyle, VerifyOriginHeader } from '../middleware/authHandle.js';
+import { VerifyFirebaseToken, VerifyUserHash, VerifyWidgetToken } from '../middleware/authHandle.js';
 import dotenv from 'dotenv';
 import axios from 'axios';
 dotenv.config();
@@ -151,7 +151,7 @@ const widgetSSEConnection = asyncHandler(async(req,res,next) => {
 const widgetStyling = asyncHandler(async(req,res,next) => {
     try{
         // verify for visitor token
-        const verify = await VerifyAccessWidgetStyle(req,res);
+        const verify = await VerifyWidgetToken(req,res);
         if(!verify){
             return
         }
@@ -172,6 +172,30 @@ const widgetStyling = asyncHandler(async(req,res,next) => {
         next({ statusCode: 500, title: custom_err_title, message: custom_err_message, stack: err.stack });
     }
 });
+//@desc to get the customization object for the admin widget mock
+//@route GET /code/admin-style-:user_hash
+//@acces PUBLIC
+const widgetAdminStyling = asyncHandler(async(req,res,next) => {
+    try{
+        //verify firebase token
+        await VerifyFirebaseToken(req,res);
+        // get the user hash
+        const { user_hash } = req.params;
+        // fetch info from the db collection
+        const widget_collection = await Widget.findById(user_hash);
+        if(!widget_collection){
+            custom_err_message = 'User widget data not found';
+            custom_err_title = 'NOT FOUND';
+        }
+        // send the object back to the  front-end
+        res.status(200).send({ 
+            widget_chat_mode: widget_collection.chat_mode, 
+            widget_style: widget_collection.customization 
+        });
+    } catch(err){
+        next({ statusCode: 500, title: custom_err_title, message: custom_err_message, stack: err.stack });
+    }
+})
 //@desc to save the updated customization for the widget
 //@route POST /code/save
 //@access PRIVATE
@@ -209,4 +233,4 @@ const saveWidgetStyling = asyncHandler(async(req,res,next) => {
     }
 });
 
-export { initializeWidgetTemplate, widgetCustomLink, widgetSSEAuth, widgetSSEConnection, widgetStyling, saveWidgetStyling, sse_connections }
+export { initializeWidgetTemplate, widgetCustomLink, widgetSSEAuth, widgetSSEConnection, widgetStyling, saveWidgetStyling, widgetAdminStyling, sse_connections }
