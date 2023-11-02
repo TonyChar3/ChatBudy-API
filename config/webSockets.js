@@ -57,16 +57,17 @@ export const webSocketServerSetUp = (redis_client, server) => {
     });
 
     wss.on('connection',async(ws,req) => {
-        console.log('connection map for chatrooms', ws_chatroom);
-        console.log('wss_connections', wss_connections);
-        console.log('visitor id', visitorID);
-        console.log('admin id', userHash);
         ws["id"] = visitorID
         const ws_chatroom = chatrooms_map.get(visitorID)
         const ask_email = await askEmailForm(userHash, visitorID);
         const connect_user_array = wss_connections.get(visitorID) || [];
         connect_user_array.push({ id: user_type_login, ws: ws });// set a new connected user into the array
         wss_connections.set(visitorID, connect_user_array);
+
+        console.log('connection map for chatrooms', ws_chatroom);
+        console.log('wss_connections', wss_connections);
+        console.log('visitor id', visitorID);
+        console.log('admin id', userHash);
 
         if(user_type_login === visitorID){
             // check if the visitor email is set
