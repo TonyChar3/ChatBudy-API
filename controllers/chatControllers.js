@@ -43,6 +43,8 @@ const createChatRoom = asyncHandler(async(req,res,next) => {
             }),
             redis_chatroom.set(verify.id, JSON.stringify({ visitor: verify.id, messages: [] }), "EX", 3600)
         ])
+        console.log('db save: ', add_chatroom);
+        console.log('cache save: ', cache_chatroom);
         if(!add_chatroom || !cache_chatroom){
             switch (!add_chatroom || !cache_chatroom){
                 case !add_chatroom:
