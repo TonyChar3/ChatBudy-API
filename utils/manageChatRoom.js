@@ -144,16 +144,17 @@ const verifyCache = async(verify_mode, client, visitor_id, chat_obj) => {
 /**
  * Function to check and set the chatroom in the WebSocket server
  */
-const checkAndSetWSchatRoom = async(cache_key_name, redis_client, visitor_id, user_hash, connection_map) => {
+const checkAndSetWSchatRoom = async(cache_key_name, redis_client, visitor_id, user_hash) => {
     try{
         // cache_key_name =  Visitor_chat
         const chat_room_cache = await verifyCache(cache_key_name,redis_client, visitor_id);
-        if(!chat_room_cache){
+        if(!chat_room_cache) { 
             // fetch the chatroom
             const chat_room_collection = await Chatroom.findById(user_hash);
-            console.log('chat room collection not cached', chat_room_collection)
+            console.log('chat room collection not cached', chat_room_collection);
+            console.log('finding index with this visitor id', visitor_id);
             // find room index in the array of chatrooms
-            const room_index = chat_room_collection.chat_rooms.findIndex(rooms => rooms.visitor.toString() === visitor_id.toString());
+            const room_index = chat_room_collection.chat_rooms.findIndex(rooms => rooms.visitor === visitor_id.toString());
             console.log('chat room index', room_index);
             // verify the cache
             await verifyCache(cache_key_name,redis_client, visitor_id, chat_room_collection.chat_rooms[room_index]);
