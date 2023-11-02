@@ -34,7 +34,7 @@ export const webSocketServerSetUp = (redis_client, server) => {
             // check the cache and set the chatroom
             const check_for_chatroom = await checkAndSetWSchatRoom("Visitor_chat", redis_client, visitorID, userHash);
             if(!chatrooms_map.get(visitorID)){
-                chatrooms_map.set(check_for_chatroom.visitor_id, JSON.parse(check_for_chatroom.chat_room));
+                chatrooms_map.set(check_for_chatroom.visitor_id, check_for_chatroom.chat_room);
             }
             if(check_for_chatroom.error){
                 console.log(check_for_chatroom.error_msg);
