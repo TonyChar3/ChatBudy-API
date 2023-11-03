@@ -54,78 +54,59 @@ const sendWidgetAdminStatus = async(user_hash, user_id) => {
     }
 }
 /**
- * Function to send the visitors array to the front-end
+ * Function to send the admin panel user data for the SSE
  */
-const fetchAllAdminVisitor = async(connected_user) => {
+const fetchAdminData = async(connected_user) => {
     try{
-        if(connected_user){
-            const decode_token = await admin.auth().verifyIdToken(connected_user.accessToken);
-            const user = await User.findById(decode_token.uid);
-            const visitor_collection = await Visitors.findById(user.user_access);
-            if(!visitor_collection.visitor.length > 0){
-                sendAdminSSEInfo('visitor', user._id, []);
-                return;
-            }
+        //decode the firebase auth token
+        const decode_token = await admin.auth().verifyIdToken(connected_user.accessToken);
+        // get the user data
+        const user = await User.findById(decode_token.uid);
+        const [visitor_collection, chatroom_collection] = await Promise.all([
+            ChatRoom.findById(user.user_access),
+            Visitors.findById(user.user_access)
+        ]);
+        switch(!visitor_collection || !chatroom_collection){
+            case !visitor_collection:
+                return {
+                    error: true,
+                    error_msg: 'fetchAdminData() at manageSSE.js in utils: fetching visitor collection failed.',
+                    error_stack: err.stack || 'NO STACK TRACE.'
+                }
+            case !chatroom_collection:
+                return {
+                    error: true,
+                    error_msg: 'fetchAdminData() at manageSSE.js in utils: fetching chatroom collection failed.',
+                    error_stack: err.stack || 'NO STACK TRACE.'
+                }
+            default:
+                break;
+        }
+        // send visitors
+        if(!visitor_collection.visitor.length > 0){
+            sendAdminSSEInfo('visitor', user._id, []);
+        } else {
             sendAdminSSEInfo('visitor', user._id, visitor_collection.visitor);
-            return;
         }
-    } catch(err){
-        console.log('fetchAllAdminVisitor() at manageSSE.js in utils: Unable to fetch admin visitor data. ', err.stack);
-        return {
-            error: true,
-            error_msg: 'fetchAllAdminVisitor() at manageSSE.js in utils: Unable to fetch admin visitor data',
-            error_stack: err.stack || 'NO STACK TRACE.'
-        }
-    }
-}
-/**
- * Function to send the notifications array to the front-end
- */
-const fetchAllAdminNotification = async(connected_user) => {
-    try{
-        if(connected_user){
-            const decode_token = await admin.auth().verifyIdToken(connected_user.accessToken);
-            const user = await User.findById(decode_token.uid);
-            if(!user.notification.length > 0) {
-                sendAdminSSEInfo('notification', user._id, []);
-                return
-            }
-            sendAdminSSEInfo('notification', user._id, user.notification);
+        // send notification
+        if(!user.notification.length > 0) {
+            sendAdminSSEInfo('notification', user._id, []);
             return
+        } else {
+            sendAdminSSEInfo('notification', user._id, user.notification);
         }
+        // send analytics
+        sendAdminSSEInfo('analytics',user._id, { 
+            conversion_data: chatroom_collection.conversionData,
+            visitor_data: visitor_collection.visitorData,
+            browser_data: visitor_collection.browserData
+        });
+
     } catch(err){
-        console.log('fetchAllAdminNotification() at manageSSE.js in utils: Unable to fetch admin notification data. ', err.stack);
+        console.log('fetchAdminData() at manageSSE.js in utils: Unable to fetch admin data. ', err.stack);
         return {
             error: true,
-            error_msg: 'fetchAllAdminNotification() at manageSSE.js in utils: Unable to fetch admin notification data',
-            error_stack: err.stack || 'NO STACK TRACE.'
-        }
-    }
-}
-/**
- * Function to send the chatroom analytics data to the front-end
- */
-const fetchAdminAnalyticsData = async(connected_user) => {
-    try{
-        if(connected_user){
-            const decode_token = await admin.auth().verifyIdToken(connected_user.accessToken);
-            const user = await User.findById(decode_token.uid);
-            const [ chatroom_collection, visitor_collection ] = await Promise.all([
-                ChatRoom.findById(user.user_access),
-                Visitors.findById(user.user_access)
-            ]);
-            // send the analytics data
-            sendAdminSSEInfo('analytics',user._id, { 
-                conversion_data: chatroom_collection.conversionData,
-                visitor_data: visitor_collection.visitorData,
-                browser_data: visitor_collection.browserData
-            });
-        }
-    } catch(err){
-        console.log('fetchAdminAnalyticsData() at manageSSE.js in utils: Unable to fetch admin analytics data. ', err.stack);
-        return {
-            error: true,
-            error_msg: 'fetchAdminAnalyticsData() at manageSSE.js in utils: Unable to fetch admin analytics data',
+            error_msg: 'fetchAdminData() at manageSSE.js in utils: Unable to fetch admin data',
             error_stack: err.stack || 'NO STACK TRACE.'
         }
     }
@@ -176,11 +157,9 @@ const widgetInstallStatus = async(user_hash, data) => {
 export { 
     sendAdminFreshUpdatedInfo, 
     sendAdminSSEInfo,
-    sendWidgetVisitorNotifications, 
-    fetchAllAdminVisitor, 
-    fetchAllAdminNotification, 
-    fetchAdminAnalyticsData, 
+    sendWidgetVisitorNotifications,  
     adminLogInStatus,
     widgetInstallStatus,
-    sendWidgetAdminStatus
+    sendWidgetAdminStatus,
+    fetchAdminData
 }

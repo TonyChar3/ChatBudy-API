@@ -1,5 +1,5 @@
 import asyncHandler from 'express-async-handler';
-import { fetchAllAdminVisitor, fetchAllAdminNotification, fetchAdminAnalyticsData } from '../utils/manageSSE.js';
+import { fetchAdminData } from '../utils/manageSSE.js';
 import { VerifyFirebaseToken } from '../middleware/authHandle.js';
 const connections = new Map()
 let connectedUser;
@@ -37,28 +37,24 @@ const authSSEconnection = asyncHandler(async(req,res,next) => {
 //@access PRIVATE
 const connectionSSE = asyncHandler(async(req,res,next) => {
     try{
-        if(connectedUser){
-            res.setHeader('Content-Type', 'text/event-stream');
-            res.setHeader('Cache-Control', 'no-cache');
-            res.setHeader('Connection', 'keep-alive');
-            res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
                     
-            res.write('SSE connection started\n\n');
+        res.write('SSE connection started\n\n');
 
-            connections.set(connectedUser.id, res);
-            fetchAllAdminVisitor(connectedUser);
-            fetchAllAdminNotification(connectedUser);
-            fetchAdminAnalyticsData(connectedUser);
+        connections.set(connectedUser.id, res);
+        fetchAdminData(connectedUser);
             
-            res.on("error", (error) => {
-                custom_err_message = error.message;
-                connections.delete(connectedUser.id);
-            });
+        res.on("error", (error) => {
+            custom_err_message = error.message;
+            connections.delete(connectedUser.id);
+        });
                 
-            res.on('close', () => {
-                connections.delete(connectedUser.id);
-            });
-        }
+        res.on('close', () => {
+            connections.delete(connectedUser.id);
+        });
     } catch(err){
         next({ 
             statusCode: 500, 
