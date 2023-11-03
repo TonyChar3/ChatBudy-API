@@ -64,8 +64,8 @@ const fetchAdminData = async(connected_user) => {
             // get the user data
             const user = await User.findById(decode_token.uid);
             const [visitor_collection, chatroom_collection] = await Promise.all([
-                ChatRoom.findById(user.user_access),
-                Visitors.findById(user.user_access)
+                Visitors.findById(user.user_access),
+                ChatRoom.findById(user.user_access)
             ]);
             if(!visitor_collection){
                 return {
@@ -81,8 +81,6 @@ const fetchAdminData = async(connected_user) => {
                     error_stack: err.stack || 'NO STACK TRACE.'
                 }
             }
-            console.log('visitor collection', visitor_collection.visitor);
-            console.log('chatroom collection', chatroom_collection);
             // send visitors
             if(!visitor_collection.visitor.length > 0){
                 sendAdminSSEInfo('visitor', user._id, []);
