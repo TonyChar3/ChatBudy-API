@@ -81,6 +81,8 @@ const fetchAdminData = async(connected_user) => {
                     error_stack: err.stack || 'NO STACK TRACE.'
                 }
             }
+            console.log('visitor collection', visitor_collection.visitor);
+            console.log('chatroom collection', chatroom_collection);
             // send visitors
             if(!visitor_collection.visitor.length > 0){
                 sendAdminSSEInfo('visitor', user._id, []);
