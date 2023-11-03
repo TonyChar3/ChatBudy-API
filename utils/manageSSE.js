@@ -58,50 +58,49 @@ const sendWidgetAdminStatus = async(user_hash, user_id) => {
  */
 const fetchAdminData = async(connected_user) => {
     try{
-        //decode the firebase auth token
-        const decode_token = await admin.auth().verifyIdToken(connected_user.accessToken);
-        // get the user data
-        const user = await User.findById(decode_token.uid);
-        const [visitor_collection, chatroom_collection] = await Promise.all([
-            ChatRoom.findById(user.user_access),
-            Visitors.findById(user.user_access)
-        ]);
-        switch(!visitor_collection || !chatroom_collection){
-            case !visitor_collection:
+        if(connected_user){
+            //decode the firebase auth token
+            const decode_token = await admin.auth().verifyIdToken(connected_user.accessToken);
+            // get the user data
+            const user = await User.findById(decode_token.uid);
+            const [visitor_collection, chatroom_collection] = await Promise.all([
+                ChatRoom.findById(user.user_access),
+                Visitors.findById(user.user_access)
+            ]);
+            if(!visitor_collection){
                 return {
                     error: true,
                     error_msg: 'fetchAdminData() at manageSSE.js in utils: fetching visitor collection failed.',
                     error_stack: err.stack || 'NO STACK TRACE.'
                 }
-            case !chatroom_collection:
+            }
+            if(!chatroom_collection){
                 return {
                     error: true,
                     error_msg: 'fetchAdminData() at manageSSE.js in utils: fetching chatroom collection failed.',
                     error_stack: err.stack || 'NO STACK TRACE.'
                 }
-            default:
-                break;
+            }
+            // send visitors
+            if(!visitor_collection.visitor.length > 0){
+                sendAdminSSEInfo('visitor', user._id, []);
+            } else {
+                sendAdminSSEInfo('visitor', user._id, visitor_collection.visitor);
+            }
+            // send notification
+            if(!user.notification.length > 0) {
+                sendAdminSSEInfo('notification', user._id, []);
+                return
+            } else {
+                sendAdminSSEInfo('notification', user._id, user.notification);
+            }
+            // send analytics
+            sendAdminSSEInfo('analytics',user._id, { 
+                conversion_data: chatroom_collection.conversionData,
+                visitor_data: visitor_collection.visitorData,
+                browser_data: visitor_collection.browserData
+            });
         }
-        // send visitors
-        if(!visitor_collection.visitor.length > 0){
-            sendAdminSSEInfo('visitor', user._id, []);
-        } else {
-            sendAdminSSEInfo('visitor', user._id, visitor_collection.visitor);
-        }
-        // send notification
-        if(!user.notification.length > 0) {
-            sendAdminSSEInfo('notification', user._id, []);
-            return
-        } else {
-            sendAdminSSEInfo('notification', user._id, user.notification);
-        }
-        // send analytics
-        sendAdminSSEInfo('analytics',user._id, { 
-            conversion_data: chatroom_collection.conversionData,
-            visitor_data: visitor_collection.visitorData,
-            browser_data: visitor_collection.browserData
-        });
-
     } catch(err){
         console.log('fetchAdminData() at manageSSE.js in utils: Unable to fetch admin data. ', err.stack);
         return {
