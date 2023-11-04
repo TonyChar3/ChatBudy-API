@@ -90,7 +90,6 @@ const fetchAdminData = async(connected_user) => {
             // send notification
             if(!user.notification.length > 0) {
                 sendAdminSSEInfo('notification', user._id, []);
-                return
             } else {
                 sendAdminSSEInfo('notification', user._id, user.notification);
             }
