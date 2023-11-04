@@ -1,7 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import connectDB from './config/dbConnection.js';
-import helmet from 'helmet';
+import helmet, { crossOriginEmbedderPolicy } from 'helmet';
 import cors from 'cors';
 import admin from 'firebase-admin';
 import fs from 'fs';
@@ -19,6 +19,8 @@ import '@shopify/shopify-api/adapters/node';
 import {shopifyApi, LATEST_API_VERSION} from '@shopify/shopify-api';
 import redis from 'redis';
 import Constant from "./constants.js";
+import cron from 'node-cron';
+import { pingServer } from './middleware/pingSever.js';
 /**
  * ChatBüdy project Nodejs + Express API
  * 
@@ -158,6 +160,14 @@ app.use((err, req, res, next) => {
             break;
     }
 });
+
+// set up a cron job
+cron.schedule('*/14 * * * *', () => {
+    pingServer();
+    },{
+       scheduled: true,
+       timezone: 'Etc/UTC' 
+    });
 
 // Connect and start the server
 const server = app.listen(port, async() => {

@@ -27,6 +27,7 @@
     "jsonwebtoken": "^9.0.1",
     "mongodb": "^5.7.0",
     "mongoose": "^7.4.3",
+    "node-cron": "^3.0.2",
     "node-fetch": "^3.3.2",
     "nodemailer": "^6.9.7",
     "nodemailer-ses-transport": "^1.5.1",
