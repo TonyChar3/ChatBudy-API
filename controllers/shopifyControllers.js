@@ -13,6 +13,21 @@ let custom_statusCode;
 let custom_err_message;
 let custom_err_title;
 
+//@desc a route to get the admin hash for to initialize the widget
+//@route GET /shopify/widget_id
+//@access PRIVATE
+const shopifyAdminID = asyncHandler(async(req,res,next) => {
+    try{
+        console.log('shopify request: ', req)
+    } catch(err){
+        next({ 
+            statusCode: custom_statusCode || 500, 
+            title: custom_err_title || 'SERVER ERROR', 
+            message: custom_err_message, 
+            stack: err.stack 
+        });
+    }
+})
 //@desc test route to get a feel of the shopify api
 //@route POST /shopify/auth
 //@access PRIVATE
@@ -147,4 +162,4 @@ const shopifyCallback = asyncHandler(async(req,res,next) => {
         }
 })
 
-export { shopifyAuth, shopifyCallback }
+export { shopifyAuth, shopifyCallback, shopifyAdminID }
