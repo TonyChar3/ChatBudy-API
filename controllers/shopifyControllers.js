@@ -19,7 +19,7 @@ let custom_err_title;
 const shopifyAdminID = asyncHandler(async(req,res,next) => {
     try{
         console.log('shopify request: ', req)
-        res.status(201).json({ admin_id: '123456'})
+        res.status(201).send({ admin_id: '123456'})
     } catch(err){
         next({ 
             statusCode: custom_statusCode || 500, 
