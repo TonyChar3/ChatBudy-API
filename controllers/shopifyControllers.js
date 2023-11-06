@@ -68,17 +68,9 @@ const shopifyAuth = asyncHandler( async(req, res, next) => {
 const shopifyCallback = asyncHandler(async(req,res,next) => {
         const { shop, hmac, code, state } = req.query;
         const stateCookie = await redis_nonce_storage.get(`nonce:${state}`)
-     
+        console.log(stateCookie)
         if (state !== stateCookie) {
-            custom_statusCode = 403;
-            custom_err_message = 'Reuqest origin cannot be verified';
-            custom_err_title = 'FORBIDDEN';
-            next({ 
-                statusCode: custom_statusCode || 500, 
-                title: custom_err_title || 'SERVER ERROR', 
-                message: custom_err_message, 
-                stack: err.stack 
-            });
+            throw new Error('Request origin cannot be verified')
         }
      
         if (shop && hmac && code) {
@@ -97,15 +89,7 @@ const shopifyCallback = asyncHandler(async(req,res,next) => {
             };
          
             if (!hashEquals) {
-                custom_statusCode = 400;
-                custom_err_message = 'HMAC validation failed';
-                custom_err_title = 'VALIDATION ERROR';
-                next({ 
-                    statusCode: custom_statusCode || 500, 
-                    title: custom_err_title || 'SERVER ERROR', 
-                    message: custom_err_message, 
-                    stack: err.stack 
-                });
+                throw new Error('HMAC validation failed')
             }
             const accessTokenRequestUrl = `https://${shop}/admin/oauth/access_token?client_id=${process.env.SHOPIFY_PUBLIC}&client_secret=${process.env.SHOPIFY_PRIVATE}&code=${code}`;
             const accessTokenPayload = {
@@ -131,24 +115,22 @@ const shopifyCallback = asyncHandler(async(req,res,next) => {
                 .then(() => {
                     res.redirect(`https://${shop}/admin/themes/current/editor?context=apps&template=product&activateAppId=${process.env.SHOPIFY_APP_ID}`);
                 })
-                .catch(() => {
-                    custom_err_message = 'Unable to redirect to url';
-                    custom_err_title = 'SERVER ERROR'
+                .catch((err) => {
+                    console.log(err)
                     next({ 
                         statusCode: custom_statusCode || 500, 
-                        title: custom_err_title || 'SERVER ERROR', 
-                        message: custom_err_message, 
+                        title: 'SERVER ERROR', 
+                        message: 'Unable to redirect to url', 
                         stack: err.stack 
                     });
                 });
             }) 
-            .catch(() => {
-                custom_err_message = 'Invalid shopify accessToken';
-                custom_err_title = 'SERVER ERROR'
+            .catch((err) => {
+                console.log(err)
                 next({ 
                     statusCode: custom_statusCode || 500, 
-                    title: custom_err_title || 'SERVER ERROR', 
-                    message: custom_err_message, 
+                    title: 'SERVER ERROR', 
+                    message: 'Invalid shopify accessToken', 
                     stack: err.stack 
                 });
             });
