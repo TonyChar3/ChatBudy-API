@@ -21,6 +21,7 @@ import redis from 'redis';
 import Constant from "./constants.js";
 import cron from 'node-cron';
 import { pingServer } from './middleware/pingSever.js';
+
 /**
  * ChatBüdy project Nodejs + Express API
  * 
@@ -83,6 +84,9 @@ const port = process.env.PORT || 8000
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// Shopify integration route
+app.use('/shopify', shopifyRoute);
 // enable CORS
 app.use(cors(corsOptions));
 // Security purposes
@@ -105,9 +109,6 @@ app.use('/connection', sseRoute);
 
 // Password update route
 app.use('/password-update', passwordUpdateRoute);
-
-// Shopify integration route
-app.use('/shopify', shopifyRoute);
 
 // handle the error
 app.use((err, req, res, next) => {
