@@ -30,6 +30,8 @@ const corsOptions = async(req,callback ) => {
             });
             if(matchingOrigin) {
                 callback(null, { origin: matchingOrigin, credentials: true });
+            } else if(host === 'chatbudy-api.onrender.com'){
+                callback(null, { origin: '*', credentials: true });
             } else {
                 callback(new Error('Not allowed by CORS'));
             }
