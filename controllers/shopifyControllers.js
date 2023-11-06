@@ -112,7 +112,7 @@ const shopifyCallback = asyncHandler(async(req,res,next) => {
                     headers: apiRequestHeaders
                 })
                 .then(() => {
-                    res.redirect(`https://admin.shopify.com/store/${shop}/apps/chatbudy-widget/`)
+                    res.redirect(`https://${shop}/admin/themes/current/editor?context=apps&template=product&activateAppId=${process.env.SHOPIFY_APP_ID}`);
                 })
                 .catch((err) => {
                     next({ 
