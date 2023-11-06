@@ -18,7 +18,6 @@ let custom_err_title;
 //@access PRIVATE
 const shopifyAdminID = asyncHandler(async(req,res,next) => {
     try{
-        console.log('shopify request: ', req)
         res.status(201).send({ admin_id: '123456'})
     } catch(err){
         next({ 
@@ -68,7 +67,7 @@ const shopifyAuth = asyncHandler( async(req, res, next) => {
 const shopifyCallback = asyncHandler(async(req,res,next) => {
         const { shop, hmac, code, state } = req.query;
         const stateCookie = await redis_nonce_storage.get(`nonce:${state}`)
-        console.log(stateCookie)
+
         if (state !== stateCookie) {
             throw new Error('Request origin cannot be verified')
         }
@@ -113,10 +112,9 @@ const shopifyCallback = asyncHandler(async(req,res,next) => {
                     headers: apiRequestHeaders
                 })
                 .then(() => {
-                    res.redirect(`https://${shop}/admin/themes/current/editor?context=apps&template=product&activateAppId=${process.env.SHOPIFY_APP_ID}`);
+                    res.redirect(`https://admin.shopify.com/store/${shop}/apps/chatbudy-widget-2/`)
                 })
                 .catch((err) => {
-                    console.log(err)
                     next({ 
                         statusCode: custom_statusCode || 500, 
                         title: 'SERVER ERROR', 
@@ -126,7 +124,6 @@ const shopifyCallback = asyncHandler(async(req,res,next) => {
                 });
             }) 
             .catch((err) => {
-                console.log(err)
                 next({ 
                     statusCode: custom_statusCode || 500, 
                     title: 'SERVER ERROR', 
@@ -140,7 +137,7 @@ const shopifyCallback = asyncHandler(async(req,res,next) => {
                 statusCode: custom_statusCode || 500, 
                 title: custom_err_title || 'SERVER ERROR', 
                 message: custom_err_message, 
-                stack: err.stack 
+                stack: 'NO STACK TRACE.' 
             });
         }
 })
