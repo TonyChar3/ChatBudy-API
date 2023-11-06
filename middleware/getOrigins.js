@@ -6,7 +6,7 @@ const AllowedDomainVerification = async() => {
     try{ 
         const domains = await Widget.distinct('domain');
         domains.push('http://localhost:5173');// allow access to the admin panel as well
-        domains.push('https://former-town-petroleum-ribbon.trycloudflare.com')
+        domains.push('https://pig-american-str-went.trycloudflare.com')
         domains.push('https://tony-web-store.myshopify.com')
         return domains
     } catch(err){
