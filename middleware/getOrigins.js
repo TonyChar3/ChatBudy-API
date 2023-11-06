@@ -8,6 +8,7 @@ const AllowedDomainVerification = async() => {
         domains.push('http://localhost:5173');// allow access to the admin panel as well
         domains.push('https://iran-mediterranean-reservation-handled.trycloudflare.com')
         domains.push('https://tony-web-store.myshopify.com')
+        domains.push('https://chatbudy-api.onrender.com')
         return domains
     } catch(err){
         console.log(err)
