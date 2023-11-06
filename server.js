@@ -12,6 +12,7 @@ import sseRoute from './routes/sseRoute.js';
 import chatRoute from './routes/chatRoute.js';
 import passwordUpdateRoute from './routes/passwordUpdateRoute.js';
 import shopifyRoute from './routes/shopifyRoute.js';
+import shopifyCallbackRoute from './routes/shopifyCallbackRoute.js';
 import { corsOptions } from './middleware/getOrigins.js';
 import cookieParser from 'cookie-parser';
 import { webSocketServerSetUp } from './config/webSockets.js';
@@ -85,8 +86,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Shopify integration route
-app.use('/shopify', shopifyRoute);
+app.use('/shopify', shopifyCallbackRoute);
 // enable CORS
 app.use(cors(corsOptions));
 // Security purposes
@@ -109,6 +109,9 @@ app.use('/connection', sseRoute);
 
 // Password update route
 app.use('/password-update', passwordUpdateRoute);
+
+// Shopify integration route
+app.use('/shopify', shopifyRoute);
 
 // handle the error
 app.use((err, req, res, next) => {

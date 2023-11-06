@@ -5,8 +5,6 @@ const router = express.Router();
 
 router.post('/auth', shopifyAuth);
 
-router.get('/callback', shopifyCallback);
-
 router.post('/widget-id', shopifyAdminID);
 
 export default router
