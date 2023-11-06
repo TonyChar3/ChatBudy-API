@@ -7,6 +7,6 @@ router.post('/auth', shopifyAuth);
 
 router.get('/callback', shopifyCallback);
 
-router.get('/widget-id', shopifyAdminID);
+router.post('/widget-id', shopifyAdminID);
 
 export default router
