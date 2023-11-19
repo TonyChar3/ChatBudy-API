@@ -81,9 +81,6 @@ const redis_nonce_storage = redis.createClient({
     database: 2
 });
 
-// stripe
-stripeInstance
-
 // Set up Express
 const app = express();
 const port = process.env.PORT || 8000
