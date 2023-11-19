@@ -16,7 +16,7 @@ const createPaymentIntent = asyncHandler( async(req,res,next) => {
                 },
             ],
             mode: 'subscription',
-            success_url: `http://localhost:5173/register`,
+            success_url: `http://localhost:5173/navbar/visitors`,
             cancel_url: `http://localhost:5173/register?canceled=true`,
             automatic_tax: { enabled: true },
         });
