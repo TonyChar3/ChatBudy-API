@@ -11,7 +11,7 @@ import visitorRoutes from './routes/visitorRoutes.js';
 import sseRoute from './routes/sseRoute.js';
 import chatRoute from './routes/chatRoute.js';
 import passwordUpdateRoute from './routes/passwordUpdateRoute.js';
-import StripeRoute from './routes/stripeRoute.js';
+import stripeRoute from './routes/stripeRoute.js';
 import { corsOptions } from './middleware/getOrigins.js';
 import cookieParser from 'cookie-parser';
 import { webSocketServerSetUp } from './config/webSockets.js';
@@ -114,7 +114,7 @@ app.use('/connection', sseRoute);
 app.use('/password-update', passwordUpdateRoute);
 
 // Stripe route
-app.use('/stripe', StripeRoute);
+app.use('/stripe', stripeRoute);
 
 // handle the error
 app.use((err, req, res, next) => {
