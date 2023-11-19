@@ -19,10 +19,11 @@ const createPaymentIntent = asyncHandler( async(req,res,next) => {
                 },
             ],
             mode: 'subscription',
-            success_url: `http://10.0.0.78:5173/register`,
-            cancel_url: `http://10.0.0.78:5173/register?canceled=true`,
+            success_url: `http://localhost:5173/register`,
+            cancel_url: `http://localhost:5173/register?canceled=true`,
             automatic_tax: {enabled: true},
         });
+        console.log(session)
         // Send back the checkout UI url  
         res.redirect({ url: session.url});
     } catch(err){
