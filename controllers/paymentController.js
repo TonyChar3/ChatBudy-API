@@ -9,9 +9,15 @@ const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 //@desc to create the payment intent to the stripe API
 const createPaymentIntent = asyncHandler( async(req,res,next) => {
     try{
-        console.log(stripe)
+        // create a Stripe customer
+        const StripeCustomer = await stripe.customers.create({
+            metadata:{
+                userId: '7a63495b46'
+            }
+         });
         // create the checkout session with the Stripe API
         const session = await stripe.checkout.sessions.create({
+            customer: StripeCustomer.id,
             line_items: [
                 {
                     price: process.env.STRIPE_PRODUCT,
@@ -23,7 +29,6 @@ const createPaymentIntent = asyncHandler( async(req,res,next) => {
             cancel_url: `http://localhost:5173/register?canceled=true`,
             automatic_tax: {enabled: true},
         });
-        console.log(session)
         // Send back the checkout UI url  
         res.redirect({ url: session.url});
     } catch(err){
