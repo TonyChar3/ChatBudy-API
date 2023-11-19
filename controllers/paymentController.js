@@ -21,7 +21,7 @@ const createPaymentIntent = asyncHandler( async(req,res,next) => {
             automatic_tax: { enabled: true },
         });
         // Send back the checkout UI url  
-        res.send({ url: session.url});
+        res.redirect(303, session.url);
     } catch(err){
         next(err)
     }
