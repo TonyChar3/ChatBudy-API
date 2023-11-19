@@ -1,5 +1,5 @@
 import asyncHandler from 'express-async-handler';
-import { stripeInstance } from '../server';
+import { stripeInstance } from '../server.js';
 import dotenv from 'dotenv';
 
 dotenv.config()
@@ -18,7 +18,7 @@ const createPaymentIntent = asyncHandler( async(req,res,next) => {
             mode: 'subscription',
             success_url: `http://localhost:5173/register`,
             cancel_url: `http://localhost:5173/register?canceled=true`,
-            automatic_tax: {enabled: true},
+            automatic_tax: { enabled: true },
         });
         // Send back the checkout UI url  
         res.send({ url: session.url});

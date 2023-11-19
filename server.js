@@ -1,7 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import connectDB from './config/dbConnection.js';
-import helmet, { crossOriginEmbedderPolicy } from 'helmet';
+import helmet from 'helmet';
 import cors from 'cors';
 import admin from 'firebase-admin';
 import fs from 'fs';
