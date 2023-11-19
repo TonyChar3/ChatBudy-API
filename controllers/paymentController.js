@@ -1,17 +1,14 @@
 import asyncHandler from 'express-async-handler';
-import Stripe from 'stripe';
+import { stripeInstance } from '../server';
 import dotenv from 'dotenv';
 
 dotenv.config()
 
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
-
 //@desc to create the payment intent to the stripe API
 const createPaymentIntent = asyncHandler( async(req,res,next) => {
     try{
-        console.log(req.headers)
         // create the checkout session with the Stripe API
-        const session = await stripe.checkout.sessions.create({
+        const session = await stripeInstance.checkout.sessions.create({
             line_items: [
                 {
                     price: process.env.STRIPE_PRODUCT_ID,
@@ -57,7 +54,7 @@ const paymentFulfillment = asyncHandler( async(req,res,next) => {
   
     // Handle the event
     if(eventType === 'checkout.session.completed'){
-        stripe.customers.retrieve(data.customer).then(
+        stripeInstance.customers.retrieve(data.customer).then(
             (customer) => {
                 // manipulate user data
                 console.log('payment fulfilled');

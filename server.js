@@ -22,6 +22,10 @@ import Constant from "./constants.js";
 import cron from 'node-cron';
 import { pingServer } from './middleware/pingSever.js';
 import stripe from 'stripe';
+
+// use .env variables
+dotenv.config();
+
 const stripeInstance = stripe(process.env.STRIPE_SECRET_KEY);
 
 /**
@@ -57,9 +61,6 @@ const config_nodemailer = {
         pass: process.env.NODEMAILER_PASSWORD
     }
 }
-
-// use .env variables
-dotenv.config();
 
 // connect our MongoDB cluster
 connectDB();
@@ -203,5 +204,5 @@ const server = app.listen(port, async() => {
     });
 });
 
-export { redis_rate_limit, redis_chatroom, redis_nonce_storage, shopify, config_nodemailer }
+export { redis_rate_limit, redis_chatroom, redis_nonce_storage, shopify, config_nodemailer, stripeInstance }
 
