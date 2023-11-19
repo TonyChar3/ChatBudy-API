@@ -22,7 +22,7 @@ import Constant from "./constants.js";
 import cron from 'node-cron';
 import { pingServer } from './middleware/pingSever.js';
 import stripe from 'stripe';
-const stripeInstance = stripe(process.env.STRIPE_KEY);
+const stripeInstance = stripe(process.env.STRIPE_SECRET_KEY);
 
 /**
  * ChatBüdy project Nodejs + Express API
