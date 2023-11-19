@@ -15,13 +15,13 @@ const createPaymentIntent = asyncHandler( async(req,res,next) => {
                     quantity: 1,
                 },
             ],
-            mode: 'payment',
+            mode: 'subscription',
             success_url: `http://localhost:5173/register`,
             cancel_url: `http://localhost:5173/register?canceled=true`,
             automatic_tax: { enabled: true },
         });
         // Send back the checkout UI url  
-        res.redirect(303, session.url);
+        res.send({ url: session.url });
     } catch(err){
         next(err)
     }
