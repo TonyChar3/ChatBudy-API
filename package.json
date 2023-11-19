@@ -33,6 +33,7 @@
     "nodemailer-ses-transport": "^1.5.1",
     "query-string": "^8.1.0",
     "redis": "^4.6.7",
+    "stripe": "^14.5.0",
     "web-push": "^3.6.4",
     "ws": "^8.13.0"
   },

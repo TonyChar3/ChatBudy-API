@@ -20,6 +20,8 @@ import redis from 'redis';
 import Constant from "./constants.js";
 import cron from 'node-cron';
 import { pingServer } from './middleware/pingSever.js';
+import stripe from 'stripe';
+const stripeInstance = stripe(process.env.STRIPE_KEY);
 
 /**
  * ChatBüdy project Nodejs + Express API
@@ -76,6 +78,9 @@ const redis_nonce_storage = redis.createClient({
     url: process.env.REDIS_URL_CONNECT,
     database: 2
 });
+
+// stripe
+stripeInstance
 
 // Set up Express
 const app = express();
