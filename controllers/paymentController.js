@@ -9,7 +9,7 @@ const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 //@desc to create the payment intent to the stripe API
 const createPaymentIntent = asyncHandler( async(req,res,next) => {
     try{
-        console.log(req)
+        console.log(stripe)
         // create the checkout session with the Stripe API
         const session = await stripe.checkout.sessions.create({
             line_items: [
