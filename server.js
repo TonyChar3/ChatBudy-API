@@ -26,7 +26,7 @@ import stripe from 'stripe';
 // use .env variables
 dotenv.config();
 
-const stripeInstance = stripe(process.env.STRIPE_PUBLIC_KEY);
+const stripeInstance = stripe(process.env.STRIPE_SECRET_KEY);
 
 /**
  * ChatBüdy project Nodejs + Express API

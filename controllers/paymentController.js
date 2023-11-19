@@ -7,6 +7,7 @@ dotenv.config()
 //@desc to create the payment intent to the stripe API
 const createPaymentIntent = asyncHandler( async(req,res,next) => {
     try{
+        console.log('Stripe instance: ', stripeInstance)
         // create the checkout session with the Stripe API
         const session = await stripeInstance.checkout.sessions.create({
             line_items: [
