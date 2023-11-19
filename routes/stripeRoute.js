@@ -3,7 +3,7 @@ import { createPaymentIntent, paymentFulfillment } from '../controllers/paymentC
 
 const router = express.Router();
 
-router.get('/create-payment-intent', createPaymentIntent);
+router.post('/create-payment-intent', createPaymentIntent);
 
 router.post('/webhook', paymentFulfillment);
 
