@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 
 dotenv.config()
 
-const stripe = Stripe(process.env.SECRET_STRIPE);
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 //@desc to create the payment intent to the stripe API
 const createPaymentIntent = asyncHandler( async(req,res,next) => {
