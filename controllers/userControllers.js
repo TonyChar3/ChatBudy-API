@@ -17,7 +17,7 @@ let custom_err_title;
 //@access PRIVATE
 const registerUser = asyncHandler(async(req,res,next) => {
     try{
-        const { web_url, username } = req.body
+        const { web_url, username, plan } = req.body
         // TODO: Remove comment for production
         const url_regex = /^https:\/\/(?:www\.)?[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}[^ ]*$/
         const username_regex = /^[a-zA-Z0-9]+([\s._][a-zA-Z0-9]+)?$/
@@ -55,7 +55,8 @@ const registerUser = asyncHandler(async(req,res,next) => {
                 _id: firebase_user_data.uid,
                 user_access: u_hash,
                 username: username,
-                email: firebase_user_data.email
+                email: firebase_user_data.email,
+                plan: plan
             }),
             // create new widget
             Widget.create({
@@ -79,32 +80,29 @@ const registerUser = asyncHandler(async(req,res,next) => {
                 _id: u_hash
             })
         ]);
-        if(!user || !widget || !visitor || !chatroom){
-            const error_variable = !user || !widget || !visitor || !chatroom
-            switch (error_variable){
-                case !user:
-                    custom_statusCode = 500;
-                    custom_err_message = 'Unable to create a new User';
-                    custom_err_title = 'SERVER ERROR';
-                    break;
-                case !widget:
-                    custom_statusCode = 500;
-                    custom_err_message = 'Unable to create a new Widget';
-                    custom_err_title = 'SERVER ERROR';
-                    break;
-                case !visitor:
-                    custom_statusCode = 500;
-                    custom_err_message = 'Unable to create a new Visitor collection';
-                    custom_err_title = 'SERVER ERROR';
-                    break;
-                case !chatroom:
-                    custom_statusCode = 500;
-                    custom_err_message = 'Unable to create a new Chatroom collection';
-                    custom_err_title = 'SERVER ERROR';
-                    break;
-                default:
-                    break;
-            }
+        switch (!user || !widget || !visitor || !chatroom){
+            case !user:
+                custom_statusCode = 500;
+                custom_err_message = 'Unable to create a new User';
+                custom_err_title = 'SERVER ERROR';
+                break;
+            case !widget:
+                custom_statusCode = 500;
+                custom_err_message = 'Unable to create a new Widget';
+                custom_err_title = 'SERVER ERROR';
+                break;
+            case !visitor:
+                custom_statusCode = 500;
+                custom_err_message = 'Unable to create a new Visitor collection';
+                custom_err_title = 'SERVER ERROR';
+                break;
+            case !chatroom:
+                custom_statusCode = 500;
+                custom_err_message = 'Unable to create a new Chatroom collection';
+                custom_err_title = 'SERVER ERROR';
+                break;
+            default:
+                break;
         }
         res.status(200).json({ message: "Welcome to the Salezy App"});
     } catch(err){
@@ -123,7 +121,7 @@ const updateProfile = asyncHandler(async(req,res,next) => {
     // To gather every updates sent back
     const update_profile = {};
     try{
-        const { new_name, new_email } = req.body
+        const { new_name, new_email, new_plan } = req.body
         // validate and decode the token
         const decode_token = await VerifyFirebaseToken(req, res);
         // find the user with his email
@@ -153,6 +151,13 @@ const updateProfile = asyncHandler(async(req,res,next) => {
                 })
                 // set it int the updateprofile object
                 update_profile.email = new_email;
+            }
+        }
+        if(new_plan){
+            //If a new plan is sent back
+            if(user.current_plan !== new_plan){
+                // set in the updateprofile object
+                update_profile.current_plan = new_plan
             }
         }
         if(Object.keys(update_profile).length === 0){

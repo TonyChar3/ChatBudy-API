@@ -42,6 +42,10 @@ const userSchema = mongoose.Schema({
         type: String,
         required: true
     },
+    current_plan: {
+        type: String,
+        required: true
+    },
     notification:{
         type: [notificationsItem],
         default: []

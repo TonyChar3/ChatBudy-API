@@ -43,7 +43,7 @@ const paymentFulfillment = asyncHandler( async(req,res,next) => {
     let event;
 
     try {
-        event = stripe.webhooks.constructEvent(req.rawBody, sig, endpointSecret);
+        event = stripeInstance.webhooks.constructEvent(req.rawBody, sig, endpointSecret);
     } catch (err) {
         res.status(400).send(`Webhook Error: ${err.message}`);
         return;
