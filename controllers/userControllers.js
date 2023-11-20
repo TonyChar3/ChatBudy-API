@@ -54,7 +54,7 @@ const registerUser = asyncHandler(async(req,res,next) => {
                 user_access: u_hash,
                 username: username,
                 email: firebase_user_data.email,
-                plan: plan
+                current_plan: plan
             }),
             // create new widget
             Widget.create({
@@ -78,8 +78,10 @@ const registerUser = asyncHandler(async(req,res,next) => {
                 _id: u_hash
             })
         ]);
+        console.log('create u',user)
         switch (!user || !widget || !visitor || !chatroom){
             case !user:
+
                 custom_statusCode = 500;
                 custom_err_message = 'Unable to create a new User';
                 custom_err_title = 'SERVER ERROR';

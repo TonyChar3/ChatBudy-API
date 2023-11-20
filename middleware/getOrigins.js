@@ -24,8 +24,6 @@ const corsOptions = async(req,callback ) => {
         const origin = req.header('Origin');
         const host = req.header('host');
         const stripe_headers = req.rawHeaders.includes('Stripe-Signature')
-        console.log(host)
-        console.log(stripe_headers)
         if(allowedOrigins && origin){
             const matchingOrigin = allowedOrigins.find((allowedOrigin) => {
                 return origin.toString() === allowedOrigin.toString();
@@ -33,14 +31,11 @@ const corsOptions = async(req,callback ) => {
             if(matchingOrigin) {
                 callback(null, { origin: matchingOrigin, credentials: true });
             } else if(host === 'chatbudy-api.onrender.com' || host === 'localhost:8080'){
-                console.log('allowed')
                 callback(null, { origin: '*', credentials: true });
             } else {
-                console.log('not allowed')
                 callback(new Error('Not allowed by CORS'));
             }
         } else if (stripe_headers && host === 'chatbudy-api.onrender.com' || host === 'localhost:8080') {
-            console.log('allowed')
             callback(null, { origin: `${host === 'localhost:8080'? 'localhost:8080' : 'chatbudy-api.onrender.com'}`, credentials: true });
         }
     } catch(err){
