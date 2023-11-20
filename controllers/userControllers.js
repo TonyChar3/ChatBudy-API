@@ -18,7 +18,6 @@ let custom_err_title;
 const registerUser = asyncHandler(async(req,res,next) => {
     try{
         const { web_url, username, plan } = req.body
-        // TODO: Remove comment for production
         const url_regex = /^https:\/\/(?:www\.)?[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}[^ ]*$/
         const username_regex = /^[a-zA-Z0-9]+([\s._][a-zA-Z0-9]+)?$/
         const decode_token = await VerifyFirebaseToken(req, res);
@@ -36,7 +35,6 @@ const registerUser = asyncHandler(async(req,res,next) => {
             custom_err_message = u_hash.error_msg;
             custom_err_title = 'SERVER ERROR';
         }
-        // TODO: Remove comment for production
         // sanitize the url and the username with regex
         if(!url_regex.test(web_url)){
             custom_statusCode = 401;
