@@ -54,16 +54,18 @@ const paymentFulfillment = asyncHandler( async(req,res,next) => {
   
     // Handle the event
     if(eventType === 'checkout.session.completed'){
-        stripeInstance.customers.retrieve(data.customer).then(
-            (customer) => {
-                // manipulate user data
-                console.log('payment fulfilled');
-                console.log(customer)
-            }
-        ).catch(err => console.log(err.message))
+        console.log(eventType)
+        console.log('payment success!')
+        // stripeInstance.customers.retrieve(data.customer).then(
+        //     (customer) => {
+        //         // manipulate user data
+        //         console.log('payment fulfilled');
+        //         console.log(customer)
+        //     }
+        // ).catch(err => console.log(err.message))
     }
     // Return a 200 response to acknowledge receipt of the event
-    res.send().end();
+    res.status(200).send({ message: 'payment successful' })
 });
 
 export { createPaymentIntent, paymentFulfillment }
