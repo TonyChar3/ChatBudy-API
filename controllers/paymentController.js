@@ -31,10 +31,6 @@ const createPaymentIntent = asyncHandler( async(req,res,next) => {
 //@route POST /stripe/webhook
 //@acess PUBLIC
 const paymentFulfillment = asyncHandler( async(req,res,next) => {
-  /**
-   * This function is handle the webhook to fulfill the order after checkout.
-   * -> This will clear the cart and create a new order in the DB
-   */
     const endpointSecret = process.env.STRIPE_ENDPOINT
     const sig = req.headers['stripe-signature'];
 
@@ -65,7 +61,7 @@ const paymentFulfillment = asyncHandler( async(req,res,next) => {
         // ).catch(err => console.log(err.message))
     }
     // Return a 200 response to acknowledge receipt of the event
-    res.status(200).send({ message: 'payment successful' })
+    res.send().end()
 });
 
 export { createPaymentIntent, paymentFulfillment }

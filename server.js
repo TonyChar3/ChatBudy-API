@@ -26,7 +26,7 @@ import stripe from 'stripe';
 // use .env variables
 dotenv.config();
 
-const stripeInstance = stripe(process.env.STRIPE_SECRET_KEY);
+const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
 
 /**
  * ChatBüdy project Nodejs + Express API
@@ -84,7 +84,12 @@ const redis_nonce_storage = redis.createClient({
 // Set up Express
 const app = express();
 const port = process.env.PORT || 8000
-app.use(express.json());
+app.use(express.json({
+    limit: '5mb',
+    verify: (req, res, buf) => {
+      req.rawBody = buf.toString();
+    }
+}));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
