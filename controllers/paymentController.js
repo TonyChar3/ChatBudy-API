@@ -3,6 +3,7 @@ import { stripeInstance } from '../server.js';
 import dotenv from 'dotenv';
 import admin from 'firebase-admin';
 import { registerPlusSubs, loginUserPlanUpdate } from '../utils/managePlusSubscriber.js';
+import { VerifyFirebaseToken } from '../middleware/authHandle.js';
 
 dotenv.config()
 
@@ -11,7 +12,6 @@ const createPaymentIntent = asyncHandler( async(req,res,next) => {
     try{
         const { user_type, user_id, user_data } = req.body
         const decode_token = await admin.auth().verifyIdToken(user_id)
-        const new_token = await admin.auth().createCustomToken(decode_token.uid)
         let stripe_user_id = decode_token.uid
         const StripeCustomer = await stripeInstance.customers.create({
             metadata:{
@@ -30,20 +30,51 @@ const createPaymentIntent = asyncHandler( async(req,res,next) => {
                 },
             ],
             mode: 'subscription',
-            success_url: `${user_type === 'new_client'? `http://localhost:5173/register?success=true` : 'http://localhost:5173/navbar/visitors'}`,
-            cancel_url: `${user_type === 'new_client'? 'http://localhost:5173/register?canceled=true' : 'http://localhost:5173/login?canceled=true'}`,
+            success_url: `${user_type === 'new_client'? `http://localhost:5173/register?success=true` : user_type === 'logged_client'? 'http://localhost:5173/navbar/setting?success=true' : 'http://localhost:5173/login?success=true'}`,
+            cancel_url: `${user_type === 'new_client'? 'http://localhost:5173/register?canceled=true' : user_type === 'logged_client'? 'http://localhost:5173/navbar/setting?canceled=true' : 'http://localhost:5173/login?canceled=true'}`,
             automatic_tax: { enabled: true },
             customer_update: {
                 address: 'auto',
             }
         });
         // Send back the checkout UI url  
-        //res.status(200).cookie('new_client_id', new_token, { maxAge: 48 * 60 * 60 * 1000, httpOnly: true, sameSite: 'none', secure: true })
         res.send({ url: session.url });
     } catch(err){
         next(err)
     }
 });
+
+//@desc to start a customer portal session for the user to manage his subscriptions PLus
+//@route POST /stripe/customer-portal
+//@access PRIVATE
+const startPortalSession = asyncHandler( async(req, res, next) => {
+    try{
+        let customer_stripe_id;
+        // verify the firebase token
+        const decode_token = await VerifyFirebaseToken(req,res);
+        // find the user with matching uid
+        const customers = await stripeInstance.customers.list();
+        customers.data.forEach(customer => {
+            if(customer.metadata.userId.toString() === decode_token.uid.toString()){
+                customer_stripe_id = customer.id
+            }
+        })
+        // start portal session
+        const session = await stripeInstance.billingPortal.sessions.create({
+            customer: customer_stripe_id,
+            return_url: 'http://localhost:5173/navbar/setting?portal=true',
+        });
+        // return the url
+        res.send({ url: session.url })
+    } catch(err){
+        next({ 
+            statusCode: 500, 
+            title: 'SERVER ERROR', 
+            message: err, 
+            stack: err.stack 
+        });
+    }
+})
  
 //@desc webhook for when the checkout is done
 //@route POST /stripe/webhook
@@ -66,7 +97,7 @@ const paymentFulfillment = asyncHandler( async(req,res,next) => {
     data = event.data.object;
     eventType = event.type;
   
-    // Handle the event
+    // Checkout session completed
     if(eventType === 'checkout.session.completed'){
         stripeInstance.customers.retrieve(data.customer).then(
             (customer) => {
@@ -89,7 +120,7 @@ const paymentFulfillment = asyncHandler( async(req,res,next) => {
                             stack: 'NO STACK TRACE'
                         });
                     }
-                } else if (user_type === 'client'){
+                } else if (user_type === 'client' || user_type === 'logged_user'){
                     const login = loginUserPlanUpdate(user_id, 'plus');
                     if(login.error){
                         next({ 
@@ -102,11 +133,61 @@ const paymentFulfillment = asyncHandler( async(req,res,next) => {
                 }
             }
         ).catch(err => console.log(err.message))
-        
+    } else if (eventType === 'customer.subscription.updated'){
+        // if the subscription is cancelled
+        if(data.cancel_at_period_end){
+            stripeInstance.customers.retrieve(data.customer).then((customer) => {
+                // set plan to standard in the db
+                const switch_plan = loginUserPlanUpdate(customer.metadata.userId, 'pending_removal');
+                if(switch_plan.error){
+                    throw new Error('Error switching using plan to standard.')
+                }
+            }).catch(err => {
+                next({ 
+                    statusCode: 500, 
+                    title: 'SERVER ERROR', 
+                    message: err || 'NO MESSAGE', 
+                    stack: err.stack || 'NO STACK TRACE.'
+                });
+            }) 
+        } else if (!data.cancel_at_period_end){
+            stripeInstance.customers.retrieve(data.customer).then((customer) => {
+                // set plan to plus in the db
+                const switch_plan = loginUserPlanUpdate(customer.metadata.userId, 'plus');
+                if(switch_plan.error){
+                    throw new Error('Error switching using plan to standard.')
+                }
+            }).catch(err => {
+                next({ 
+                    statusCode: 500, 
+                    title: 'SERVER ERROR', 
+                    message: err || 'NO MESSAGE', 
+                    stack: err.stack || 'NO STACK TRACE.'
+                });
+            }) 
+        }
+    } else if (eventType === 'customer.subscription.deleted'){
+        // find the matching customer
+        stripeInstance.customers.retrieve(data.customer).then((customer) => {
+            // set plan to standard in the db
+            const switch_plan = loginUserPlanUpdate(customer.metadata.userId, 'standard');
+            if(switch_plan.error){
+                throw new Error('Error switching using plan to standard.')
+            }
+        }).catch(err => {
+            next({ 
+                statusCode: 500, 
+                title: 'SERVER ERROR', 
+                message: err || 'NO MESSAGE', 
+                stack: err.stack || 'NO STACK TRACE.'
+            });
+        })
+        // delete from stripe customer list
+        stripeInstance.customers.del(data.customer);
     }
     // Return a 200 response to acknowledge receipt of the event
     res.send().end()
 });
 
-export { createPaymentIntent, paymentFulfillment }
+export { createPaymentIntent, paymentFulfillment, startPortalSession }
 
