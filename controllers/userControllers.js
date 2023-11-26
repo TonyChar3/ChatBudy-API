@@ -8,6 +8,7 @@ import { uniqueUserHash } from '../utils/manageVisitors.js';
 import { sendAdminSSEInfo } from '../utils/manageSSE.js';
 import { Parser } from 'json2csv';
 import { VerifyFirebaseToken } from '../middleware/authHandle.js';
+import { cancelStripePlusPlan } from '../utils/managePlusSubscriber.js';
 let custom_statusCode;
 let custom_err_message;
 let custom_err_title;
@@ -154,7 +155,13 @@ const updateProfile = asyncHandler(async(req,res,next) => {
         }
         if(new_plan){
             //If a new plan is sent back
-            if(user.current_plan !== new_plan){
+            // check if the plan current plan is set to plus
+            if(user.current_plan === 'plus'){
+                // cancel the user stripe plan
+                await cancelStripePlusPlan(decode_token.uid);
+                // set the updateprofile object
+                update_profile.current_plan = new_plan
+            } else if(user.current_plan !== new_plan){
                 // set in the updateprofile object
                 update_profile.current_plan = new_plan
             }

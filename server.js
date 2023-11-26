@@ -19,8 +19,6 @@ import '@shopify/shopify-api/adapters/node';
 import {shopifyApi, LATEST_API_VERSION} from '@shopify/shopify-api';
 import redis from 'redis';
 import Constant from "./constants.js";
-import cron from 'node-cron';
-import { pingServer } from './middleware/pingSever.js';
 import stripe from 'stripe';
 
 // use .env variables
@@ -170,14 +168,6 @@ app.use((err, req, res, next) => {
             break;
     }
 });
-
-// set up a cron job
-cron.schedule('*/14 * * * *', () => {
-    pingServer();
-    },{
-       scheduled: true,
-       timezone: 'Etc/UTC' 
-    });
 
 // Connect and start the server
 const server = app.listen(port, async() => {

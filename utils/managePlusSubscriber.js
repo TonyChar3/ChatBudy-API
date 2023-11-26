@@ -4,6 +4,7 @@ import Visitors from '../models/visitorsModels.js';
 import ChatRoom from '../models/chatRoomModels.js';
 import { uniqueUserHash } from '../utils/manageVisitors.js';
 import admin from 'firebase-admin';
+import { stripeInstance } from '../server.js';
 
 /**
  * Register the user data to the persistent storage
@@ -118,4 +119,33 @@ const loginUserPlanUpdate = async(uid, new_plan) => {
         }
     }
 }
-export { registerPlusSubs, loginUserPlanUpdate }
+
+/**
+ * Cancel and delete user from stripe customer
+ */
+const cancelStripePlusPlan = async(uid) => {
+    try{
+        // find the user with matching uid
+        const customers = await stripeInstance.customers.list();
+        const subscription = await stripeInstance.subscriptions.list();
+        // find the stripe customer
+        const stripe_customer = customers.data.find(user => {
+            return user.metadata.userId.toString() === uid.toString()
+        })
+        // find the user subscription
+        const stripe_subscription = subscription.data.find(sub => {
+            return sub.customer.toString() === stripe_customer.id.toString()
+        })
+        // cancel the subscription
+        stripeInstance.subscriptions.cancel(stripe_subscription.id);
+        // delete the stripe customer
+        stripeInstance.customers.del(stripe_customer.id);
+        return
+    } catch(err){
+        return {
+            error: true,
+            error_msg: 'Error cancelling and deleting from Stripe customers.'
+        }
+    }
+}
+export { registerPlusSubs, loginUserPlanUpdate, cancelStripePlusPlan }
