@@ -53,6 +53,9 @@ const visitorElementSchema = mongoose.Schema({
     browser: {
         type: String
     },
+    mode: {
+        type: String
+    },
     notifications: [visitorNotificationsSchema]
 },
 {

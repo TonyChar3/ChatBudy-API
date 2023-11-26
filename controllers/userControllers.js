@@ -252,6 +252,10 @@ const deleteUserAccount = asyncHandler(async(req,res,next) => {
             custom_err_message = 'User data not found';
             custom_err_title = 'NOT FOUND';
         }
+        // if plus subscriber
+        if(user.current_plan === 'plus'){
+            await cancelStripePlusPlan(decode_token.uid);
+        }
         // remove the user from the db
         const [visitor, chatroom, widget] = await Promise.all([
             Visitors.deleteOne({ _id: user.user_access }),
@@ -262,32 +266,29 @@ const deleteUserAccount = asyncHandler(async(req,res,next) => {
         const [delete_user] = await Promise.all([
             User.deleteOne({ _id: decode_token.uid })
         ]);
-        if(!visitor || !chatroom || !widget || !delete_user){
-            const error_variable = !visitor || !chatroom || !widget || !delete_user;
-            switch (error_variable){
-                case !visitor:
-                    custom_statusCode = 500;
-                    custom_err_message = 'Unable to delete the user visitor collection data';
-                    custom_err_title = 'SERVER ERROR';
-                    break;
-                case !chatroom:
-                    custom_statusCode = 500;
-                    custom_err_message = 'Unable to delete the user chatroom collection data';
-                    custom_err_title = 'SERVER ERROR';
-                    break;
-                case !widget:
-                    custom_statusCode = 500;
-                    custom_err_message = 'Unable to delete the user widget data';
-                    custom_err_title = 'SERVER ERROR';
-                    break;
-                case !delete_user:
-                    custom_statusCode = 500;
-                    custom_err_message = 'Unable to delete the user data';
-                    custom_err_title = 'SERVER ERROR';
-                    break;
-                default:
-                    break;
-            }
+        switch (!visitor || !chatroom || !widget || !delete_user){
+            case !visitor:
+                custom_statusCode = 500;
+                custom_err_message = 'Unable to delete the user visitor collection data';
+                custom_err_title = 'SERVER ERROR';
+                break;
+            case !chatroom:
+                custom_statusCode = 500;
+                custom_err_message = 'Unable to delete the user chatroom collection data';
+                custom_err_title = 'SERVER ERROR';
+                break;
+            case !widget:
+                custom_statusCode = 500;
+                custom_err_message = 'Unable to delete the user widget data';
+                custom_err_title = 'SERVER ERROR';
+                break;
+            case !delete_user:
+                custom_statusCode = 500;
+                custom_err_message = 'Unable to delete the user data';
+                custom_err_title = 'SERVER ERROR';
+                break;
+            default:
+                break;
         }
         // send back success
         res.status(201).send({ user_deleted: true });

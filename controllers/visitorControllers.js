@@ -7,6 +7,7 @@ import { sendWsUserNotification } from '../utils/manageChatRoom.js';
 import Visitor from '../models/visitorsModels.js';
 import Chatroom from '../models/chatRoomModels.js';
 import User from '../models/userModels.js';
+import Widget from '../models/widgetModels.js';
 import { sendAdminSSEInfo } from '../utils/manageSSE.js';
 import { redis_chatroom } from '../server.js';
 import { send } from '../utils/manageVisitors.js';
@@ -53,12 +54,13 @@ const createVisitor = asyncHandler(async(req,res,next) => {
         const { isoCode, browser } = req.body;
         const visitor_uid = generateRandomID(user_hash);
         const visitor_browser = getVisitorBrowser(browser);
-        const [visitor, user] = await Promise.all([
+        const [visitor, user, widget] = await Promise.all([
             Visitor.findById(user_hash),
-            User.findOne({ user_access: user_hash })
+            User.findOne({ user_access: user_hash }),
+            Widget.findById(user_hash)
         ]);
         // if one fails set an error message
-        switch (!visitor || !visitor_browser || visitor_uid.error || !user){
+        switch (!visitor || !visitor_browser || visitor_uid.error || !user || !widget){
             case !visitor:
                 custom_statusCode = 404;
                 custom_err_message = 'Visitor data not found';
@@ -78,10 +80,13 @@ const createVisitor = asyncHandler(async(req,res,next) => {
                 custom_statusCode = 404;
                 custom_err_message = 'User data not found';
                 custom_err_title = 'NOT FOUND';
+            case !widget:
+                custom_statusCode = 404;
+                custom_err_message = 'Widget data not found';
+                custom_err_title = 'NOT FOUND';
             default:
                 break;
         }
-
         // increment visitorData count
         setVisitorData(visitor);
         // increment browserData count
@@ -101,7 +106,8 @@ const createVisitor = asyncHandler(async(req,res,next) => {
                   {
                     _id: visitor_uid,
                     country: isoCode,
-                    browser: visitor_browser.name
+                    browser: visitor_browser.name,
+                    mode: widget.customization.chat_mode
                   }
                 ],
                 $position: 0
