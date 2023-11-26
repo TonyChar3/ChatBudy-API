@@ -149,6 +149,7 @@ const paymentFulfillment = asyncHandler( async(req,res,next) => {
                     message: err || 'NO MESSAGE', 
                     stack: err.stack || 'NO STACK TRACE.'
                 });
+                return;
             }) 
         } else if (!data.cancel_at_period_end){
             stripeInstance.customers.retrieve(data.customer).then((customer) => {
@@ -164,6 +165,7 @@ const paymentFulfillment = asyncHandler( async(req,res,next) => {
                     message: err || 'NO MESSAGE', 
                     stack: err.stack || 'NO STACK TRACE.'
                 });
+                return;
             }) 
         }
     } else if (eventType === 'customer.subscription.deleted'){
@@ -181,6 +183,7 @@ const paymentFulfillment = asyncHandler( async(req,res,next) => {
                 message: err || 'NO MESSAGE', 
                 stack: err.stack || 'NO STACK TRACE.'
             });
+            return;
         })
         // delete from stripe customer list
         stripeInstance.customers.del(data.customer);

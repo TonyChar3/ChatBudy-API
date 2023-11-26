@@ -137,10 +137,7 @@ const cancelStripePlusPlan = async(uid) => {
             return sub.customer.toString() === stripe_customer.id.toString()
         })
         // cancel the subscription
-        stripeInstance.subscriptions.cancel(stripe_subscription.id);
-        // delete the stripe customer
-        stripeInstance.customers.del(stripe_customer.id);
-        return
+        await stripeInstance.subscriptions.cancel(stripe_subscription.id);
     } catch(err){
         return {
             error: true,
