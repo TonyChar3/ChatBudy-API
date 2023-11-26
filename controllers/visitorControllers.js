@@ -123,7 +123,8 @@ const createVisitor = asyncHandler(async(req,res,next) => {
         visitor.visitor.unshift({
             _id: visitor_uid,
             country: isoCode,
-            browser: visitor_browser.name
+            browser: visitor_browser.name,
+            mode: widget.customization.chat_mode
         });
         // update SSE data
         sendAdminSSEInfo('visitor', user._id, visitor.visitor)
