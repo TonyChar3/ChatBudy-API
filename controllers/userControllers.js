@@ -67,7 +67,8 @@ const registerUser = asyncHandler(async(req,res,next) => {
                     offline_message: "We are currently unavaible right now, please provide your email and we will get back to you as soon as possible 🙃!",
                     greeting_message: "Hi! Want to know about our special offer 👀?",
                     admin_name: "Support agent 🤖",
-                    font_color: "light"
+                    font_color: "light",
+                    chat_mode: "live-chat"
                 }
             }),
             // create Visitor collection object
@@ -80,7 +81,6 @@ const registerUser = asyncHandler(async(req,res,next) => {
         ]);
         switch (!user || !widget || !visitor || !chatroom){
             case !user:
-
                 custom_statusCode = 500;
                 custom_err_message = 'Unable to create a new User';
                 custom_err_title = 'SERVER ERROR';
