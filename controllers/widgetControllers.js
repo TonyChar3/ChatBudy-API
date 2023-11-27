@@ -112,6 +112,7 @@ const widgetSSEAuth = asyncHandler( async(req,res,next) => {
 // TODO: Add a dynamic Access-Control-Allow-Origin domain for production
 const widgetSSEConnection = asyncHandler(async(req,res,next) => {
     try{
+        console.log('Will connect to SSE widget: ', connect_sse)
         const origin = req.header('Origin');
         // Set up the SSE headers
         res.setHeader('Content-Type', 'text/event-stream');
