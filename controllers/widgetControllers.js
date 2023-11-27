@@ -130,9 +130,9 @@ const widgetSSEConnection = asyncHandler(async(req,res,next) => {
             sse_connections.delete(connect_sse.id);// delete the connected user
         });
             
-        res.on('close', () => {
+        res.on("close", () => {
+            console.log('SSE closed for: ', connect_sse.id);
             if(sse_connections.get(connect_sse.id)){
-                console.log('SSE closed for: ', connect_sse.id);
                 clearVisitorNotifications(connect_sse.user_access, connect_sse.id);
                 sse_connections.delete(connect_sse.id);// delete the connected user
             }
