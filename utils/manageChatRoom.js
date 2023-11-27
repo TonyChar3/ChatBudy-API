@@ -190,7 +190,6 @@ const sendWsUserNotification = async(client_type, user_hash, client_id, notif_ob
             case "admin":
                 // check the user collection
                 const user = await User.findOne({ user_access: user_hash });
-                const admin_notif_array = user.notification
                 // update and save DB modification 
                 const saved = await user.updateOne({
                     $push: {
@@ -201,12 +200,10 @@ const sendWsUserNotification = async(client_type, user_hash, client_id, notif_ob
                     }
                 });
                 if(saved){
-                    console.log('SAVED notfi: ', user.notification)
+                    const updated_user = await User.findOne({ user_access: user_hash });
+                    // send update through the Admin SSE
+                    sendAdminSSEInfo('notification', user._id, updated_user.notification);
                 }
-                // Send the notification to the frontend
-                admin_notif_array.unshift(notif_object);
-                // send update through the Admin SSE
-                sendAdminSSEInfo('notification', user._id, admin_notif_array);
                 break; 
             default: 
                 break;
