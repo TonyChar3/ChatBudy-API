@@ -113,29 +113,31 @@ const widgetSSEAuth = asyncHandler( async(req,res,next) => {
 const widgetSSEConnection = asyncHandler(async(req,res,next) => {
     try{
         const origin = req.header('Origin');
-        console.log(sse_connections)
-        // Set up the SSE headers
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
-        res.setHeader('Access-Control-Allow-Origin', origin);  
-        res.write('SSE connection started\n\n');
-        // send the updates
-        sse_connections.set(connect_sse.id, res);
-        sendVisitorNotification(connect_sse.user_access, connect_sse.id);
-        sendWidgetAdminStatus(connect_sse.user_access, connect_sse.id);
-        // clean up if the connection is closed or if an error occurs
-        res.on('error', (error) => {
-            console.log('SSE error closing NOW!')
-            custom_err_message = `${error.message}`
-            sse_connections.delete(connect_sse.id);// delete the connected user
-        });
-            
-        res.on('close', () => {
-            console.log('CLOSING sse')
-            clearVisitorNotifications(connect_sse.user_access, connect_sse.id);
-            sse_connections.delete(connect_sse.id);// delete the connected user
-        });
+        if(connect_sse){
+            console.log(sse_connections.get(connect_sse.id))
+            // Set up the SSE headers
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+            res.setHeader('Access-Control-Allow-Origin', origin);  
+            res.write('SSE connection started\n\n');
+            // send the updates
+            sse_connections.set(connect_sse.id, res);
+            sendVisitorNotification(connect_sse.user_access, connect_sse.id);
+            sendWidgetAdminStatus(connect_sse.user_access, connect_sse.id);
+            // clean up if the connection is closed or if an error occurs
+            res.on('error', (error) => {
+                console.log('SSE error closing NOW!')
+                custom_err_message = `${error.message}`
+                sse_connections.delete(connect_sse.id);// delete the connected user
+            });
+                
+            res.on('close', () => {
+                console.log('CLOSING sse')
+                clearVisitorNotifications(connect_sse.user_access, connect_sse.id);
+                sse_connections.delete(connect_sse.id);// delete the connected user
+            });
+        }
     } catch(err){
         next({ 
             statusCode: custom_statusCode || 500, 
