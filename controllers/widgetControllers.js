@@ -124,12 +124,12 @@ const widgetSSEConnection = asyncHandler(async(req,res,next) => {
         sendVisitorNotification(connect_sse.user_access, connect_sse.id);
         sendWidgetAdminStatus(connect_sse.user_access, connect_sse.id);
         // clean up if the connection is closed or if an error occurs
-        res.on("error", (error) => {
+        res.on('error', (error) => {
             custom_err_message = `${error.message}`
             sse_connections.delete(connect_sse.id);// delete the connected user
         });
             
-        res.on("close", () => {
+        res.on('close', () => {
             console.log('CLOSING sse')
             clearVisitorNotifications(connect_sse.user_access, connect_sse.id);
             sse_connections.delete(connect_sse.id);// delete the connected user
