@@ -33,7 +33,7 @@ const initializeWidgetTemplate = asyncHandler( async(req,res,next) => {
             custom_err_title = 'NOT FOUND';
         }
         // set installed to true
-        const widget_status = widgetInstallStatus(userhash, true);
+        const widget_status = widgetInstallStatus(req.params.user_hash, true);
         if(widget_status.error){
             throw new Error(`${widget_status.error_msg}`);
         }
