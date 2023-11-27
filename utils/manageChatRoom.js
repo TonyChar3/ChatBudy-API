@@ -185,6 +185,7 @@ const sendWsUserNotification = async(client_type, user_hash, client_id, notif_ob
                 // save DB modifications
                 const saving = await visitor_collection.save();
                 if(saving){
+                    console.log('Saved notif: ', saving);
                     // send update through the visitor SSE
                     sendWidgetVisitorNotifications(visitor._id, visitor_notif_array);
                 }
