@@ -123,7 +123,6 @@ const widgetSSEConnection = asyncHandler(async(req,res,next) => {
         sse_connections.set(connect_sse.id, res);
         sendVisitorNotification(connect_sse.user_access, connect_sse.id);
         sendWidgetAdminStatus(connect_sse.user_access, connect_sse.id);
-        widgetInstallStatus(connect_sse.user_access, true);
         // clean up if the connection is closed or if an error occurs
         res.on("error", (error) => {
             custom_err_message = `${error.message}`
@@ -167,7 +166,8 @@ const widgetStyling = asyncHandler(async(req,res,next) => {
         // send the object back to the  front-end
         res.status(200).send({ 
             widget_chat_mode: widget_collection.chat_mode, 
-            widget_style: widget_collection.customization 
+            widget_style: widget_collection.customization,
+            widget_install_status: widget_collection.installed
         });
     } catch(err){
         next({ statusCode: 500, title: custom_err_title, message: custom_err_message, stack: err.stack });

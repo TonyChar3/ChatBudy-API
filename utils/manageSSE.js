@@ -4,6 +4,7 @@ import User from '../models/userModels.js';
 import admin from 'firebase-admin';
 import Visitors from '../models/visitorsModels.js';
 import ChatRoom from '../models/chatRoomModels.js';
+import Widget from '../models/widgetModels.js';
 
 /**
  * Function to update the visitors info safely
@@ -140,6 +141,16 @@ const widgetInstallStatus = async(user_hash, data) => {
     try{
         // fetch the user with his hash
         const current_user = await User.findOne({ user_access: user_hash });
+        // fetch the widget install status
+        await Widget.findByIdAndUpdate(
+            {_id: user_hash},
+            {
+                $set: {
+                    installed: data
+                }
+            },
+            { new:true }
+        );
         // send the widget status
         sendAdminSSEInfo('widget_status', current_user._id, data);
     } catch(err){
