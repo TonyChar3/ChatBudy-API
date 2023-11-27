@@ -183,19 +183,16 @@ const sendWsUserNotification = async(client_type, user_hash, client_id, notif_ob
                 const visitor_notif_array = visitor.notifications
                 visitor.notifications.push(notif_object);
                 // save DB modifications
-                const saving = await visitor_collection.save();
-                if(saving){
-                    console.log('Saved notif: ', saving);
-                    // send update through the visitor SSE
-                    sendWidgetVisitorNotifications(visitor._id, visitor_notif_array);
-                }
+                await visitor_collection.save();
+                // send update through the visitor SSE
+                sendWidgetVisitorNotifications(visitor._id, visitor_notif_array);
                 break;
             case "admin":
                 // check the user collection
                 const user = await User.findOne({ user_access: user_hash });
                 const admin_notif_array = user.notification
                 // update and save DB modification 
-                await user.updateOne({
+                const saved = await user.updateOne({
                     $push: {
                       notification: {
                         $each: [notif_object],
@@ -203,6 +200,7 @@ const sendWsUserNotification = async(client_type, user_hash, client_id, notif_ob
                       }
                     }
                 });
+                console.log('SAVED notfi: ', saved)
                 // Send the notification to the frontend
                 admin_notif_array.unshift(notif_object);
                 // send update through the Admin SSE
