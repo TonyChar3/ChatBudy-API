@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import Visitor from '../models/visitorsModels.js';
+import Visitors from '../models/visitorsModels.js';
 import User from '../models/userModels.js';
 import jsonwebtoken from 'jsonwebtoken';
 import fs from 'fs';
@@ -71,7 +71,7 @@ const uniqueVisitorID = async(array_id) => {
     let uid_flag = true
     try{
       // find the visitor array
-      const visitor_array = await Visitor.findById(array_id);
+      const visitor_array = await Visitors.findById(array_id);
       // do ... while
       do {
           // generate the ID
@@ -209,7 +209,7 @@ const decodeJWT = async(token, type_name) => {
 const setVisitorEmail = async(user_hash, visitor_id, email) => {
   try{
     // find user visitor collection
-    const visitor_collection = await Visitor.findById(user_hash);
+    const visitor_collection = await Visitors.findById(user_hash);
     // get the visitor object index in the user visitor array
     const visitor_index = visitor_collection.visitor.findIndex(visitor => visitor._id.toString() === visitor_id.toString());
     // set the new field
@@ -292,7 +292,7 @@ const visitorSSEAuth = async(req) => {
 const sendVisitorNotification = async(user_access, visitor_id) => {
   try{
     // get the correct visitor collection
-    const visitor_collection = await Visitor.findById(user_access);
+    const visitor_collection = await Visitors.findById(user_access);
     if(!visitor_collection){
       return
     }
@@ -315,7 +315,7 @@ const sendVisitorNotification = async(user_access, visitor_id) => {
 const clearVisitorNotifications = async(user_access, visitor_id) =>{
   try{
     // find the visitor collection with the user_access
-    const visitor_collection = await Visitor.findById(user_access);
+    const visitor_collection = await Visitors.findById(user_access);
     if(!visitor_collection){
       return;
     }
@@ -327,9 +327,7 @@ const clearVisitorNotifications = async(user_access, visitor_id) =>{
     // clear up the notifications array
     visitor_collection.visitor[visitor_index].notifications = []
     // save()
-    const save = await visitor_collection.save();
-    console.log('visitor notif cleared bro', save)
-    sendWidgetVisitorNotifications(visitor_id, []);
+    await visitor_collection.save();
   } catch(err){
     console.log('ERROR clearVisitorNotifications(): ',err);
     return

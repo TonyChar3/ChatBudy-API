@@ -2,7 +2,7 @@ import asyncHandler from 'express-async-handler';
 import Widget from '../models/widgetModels.js';
 import User from '../models/userModels.js';
 import { visitorSSEAuth, sendVisitorNotification, clearVisitorNotifications } from '../utils/manageVisitors.js';
-import { widgetInstallStatus, sendWidgetAdminStatus } from '../utils/manageSSE.js';
+import { widgetInstallStatus, sendWidgetAdminStatus, sendWidgetVisitorNotifications } from '../utils/manageSSE.js';
 import { VerifyFirebaseToken, VerifyUserHash, VerifyWidgetToken } from '../middleware/authHandle.js';
 import dotenv from 'dotenv';
 import axios from 'axios';
@@ -132,6 +132,7 @@ const widgetSSEConnection = asyncHandler(async(req,res,next) => {
         });
                 
         res.on('close', () => {
+            sendWidgetVisitorNotifications(connect_sse.id, []);
             clearVisitorNotifications(connect_sse.user_access, connect_sse.id);
             sse_connections.delete(connect_sse.id);// delete the connected user
         });
