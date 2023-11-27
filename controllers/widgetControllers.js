@@ -133,9 +133,10 @@ const widgetSSEConnection = asyncHandler(async(req,res,next) => {
             });
                 
             res.on('close', () => {
-                console.log('CLOSING sse')
+                res.write('CLOSING sse')
                 clearVisitorNotifications(connect_sse.user_access, connect_sse.id);
                 sse_connections.delete(connect_sse.id);// delete the connected user
+                res.end();
             });
         }
     } catch(err){
