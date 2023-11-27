@@ -123,6 +123,7 @@ const widgetSSEConnection = asyncHandler(async(req,res,next) => {
         sse_connections.set(connect_sse.id, res);
         sendVisitorNotification(connect_sse.user_access, connect_sse.id);
         sendWidgetAdminStatus(connect_sse.user_access, connect_sse.id);
+        widgetInstallStatus(connect_sse.user_access, true);
         // clean up if the connection is closed or if an error occurs
         res.on("error", (error) => {
             custom_err_message = `${error.message}`
