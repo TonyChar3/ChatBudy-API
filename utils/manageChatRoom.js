@@ -183,9 +183,11 @@ const sendWsUserNotification = async(client_type, user_hash, client_id, notif_ob
                 const visitor_notif_array = visitor.notifications
                 visitor.notifications.push(notif_object);
                 // save DB modifications
-                await visitor_collection.save();
-                // send update through the visitor SSE
-                sendWidgetVisitorNotifications(visitor._id, visitor_notif_array);
+                const saving = await visitor_collection.save();
+                if(saving){
+                    // send update through the visitor SSE
+                    sendWidgetVisitorNotifications(visitor._id, visitor_notif_array);
+                }
                 break;
             case "admin":
                 // check the user collection
