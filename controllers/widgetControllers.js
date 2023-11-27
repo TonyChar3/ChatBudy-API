@@ -125,6 +125,7 @@ const widgetSSEConnection = asyncHandler(async(req,res,next) => {
         sendWidgetAdminStatus(connect_sse.user_access, connect_sse.id);
         // clean up if the connection is closed or if an error occurs
         res.on('error', (error) => {
+            console.log('SSE error closing NOW!')
             custom_err_message = `${error.message}`
             sse_connections.delete(connect_sse.id);// delete the connected user
         });
