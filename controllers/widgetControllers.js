@@ -112,7 +112,6 @@ const widgetSSEAuth = asyncHandler( async(req,res,next) => {
 // TODO: Add a dynamic Access-Control-Allow-Origin domain for production
 const widgetSSEConnection = asyncHandler(async(req,res,next) => {
     try{
-        const origin = req.header('Origin');
         // Set up the SSE headers
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
@@ -132,8 +131,9 @@ const widgetSSEConnection = asyncHandler(async(req,res,next) => {
         });
                 
         res.on('close', () => {
-            sendWidgetVisitorNotifications(connect_sse.id, []);
-            clearVisitorNotifications(connect_sse.user_access, connect_sse.id);
+            console.log('SSE closed')
+            // sendWidgetVisitorNotifications(connect_sse.id, []);
+            // clearVisitorNotifications(connect_sse.user_access, connect_sse.id);
             sse_connections.delete(connect_sse.id);// delete the connected user
         });
     } catch(err){
