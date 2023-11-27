@@ -1,5 +1,5 @@
 import { WebSocketServer } from 'ws';
-import { decodeJWT, setVisitorEmail } from '../utils/manageVisitors.js';
+import { decodeJWT, setVisitorEmail, clearVisitorNotifications } from '../utils/manageVisitors.js';
 import { saveChat, checkAndSetWSchatRoom, sendWsUserNotification, cacheSentChat, askEmailForm, setConversionRate } from '../utils/manageChatRoom.js';
 import dotenv from 'dotenv';
 
@@ -68,6 +68,8 @@ export const webSocketServerSetUp = (redis_client, server) => {
         wss_connections.set(visitorID, connect_user_array);
 
         if(user_type_login === visitorID){
+            // clear the notifications
+            clearVisitorNotifications(userHash, visitorID);
             // check if the visitor email is set
             if(!ask_email){
                 data_to_send = JSON.stringify({ type: 'ask-email', status: ask_email })
