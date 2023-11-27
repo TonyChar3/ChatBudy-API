@@ -200,7 +200,9 @@ const sendWsUserNotification = async(client_type, user_hash, client_id, notif_ob
                       }
                     }
                 });
-                console.log('SAVED notfi: ', saved)
+                if(saved){
+                    console.log('SAVED notfi: ', user.notification)
+                }
                 // Send the notification to the frontend
                 admin_notif_array.unshift(notif_object);
                 // send update through the Admin SSE
