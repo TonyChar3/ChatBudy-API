@@ -119,7 +119,8 @@ const widgetSSEConnection = asyncHandler(async(req,res,next) => {
             res.setHeader('Cache-Control', 'no-cache');
             res.setHeader('Connection', 'keep-alive');
             res.setHeader('X-Accel-Buffering', 'no');
-            res.setHeader('Access-Control-Allow-Origin', origin);  
+            res.flushHeaders()
+            // res.setHeader('Access-Control-Allow-Origin', origin);  
             res.write('SSE connection started\n\n');
             // send the updates
             sse_connections.set(connect_sse.id, res);
@@ -135,6 +136,7 @@ const widgetSSEConnection = asyncHandler(async(req,res,next) => {
             res.on('close', () => {
                 clearVisitorNotifications(connect_sse.user_access, connect_sse.id);
                 sse_connections.delete(connect_sse.id);// delete the connected user
+                res.end()
             });
         }
     } catch(err){
