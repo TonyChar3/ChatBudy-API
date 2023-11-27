@@ -327,8 +327,8 @@ const clearVisitorNotifications = async(user_access, visitor_id) =>{
     // clear up the notifications array
     visitor_collection.visitor[visitor_index].notifications = []
     // save()
-    await visitor_collection.save();
-    console.log('visitor notif cleared bro')
+    const save = await visitor_collection.save();
+    console.log('visitor notif cleared bro', save)
     sendWidgetVisitorNotifications(visitor_id, []);
   } catch(err){
     console.log('ERROR clearVisitorNotifications(): ',err);
