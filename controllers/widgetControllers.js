@@ -126,7 +126,7 @@ const widgetSSEConnection = asyncHandler(async(req,res,next) => {
         // clean up if the connection is closed or if an error occurs
         res.on("error", (error) => {
             custom_err_message = `${error.message}`
-            console.log(error)
+            console.log('Widget SSE: ', error)
             sse_connections.delete(connect_sse.id);// delete the connected user
         });
             
@@ -166,8 +166,7 @@ const widgetStyling = asyncHandler(async(req,res,next) => {
         // send the object back to the  front-end
         res.status(200).send({ 
             widget_chat_mode: widget_collection.chat_mode, 
-            widget_style: widget_collection.customization,
-            widget_install_status: widget_collection.installed
+            widget_style: widget_collection.customization
         });
     } catch(err){
         next({ statusCode: 500, title: custom_err_title, message: custom_err_message, stack: err.stack });
@@ -191,7 +190,8 @@ const widgetAdminStyling = asyncHandler(async(req,res,next) => {
         // send the object back to the  front-end
         res.status(200).send({ 
             widget_chat_mode: widget_collection.chat_mode, 
-            widget_style: widget_collection.customization 
+            widget_style: widget_collection.customization,
+            widget_install_status: widget_collection.installed
         });
     } catch(err){
         next({ statusCode: 500, title: custom_err_title, message: custom_err_message, stack: err.stack });
