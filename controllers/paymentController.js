@@ -30,8 +30,8 @@ const createPaymentIntent = asyncHandler( async(req,res,next) => {
                 },
             ],
             mode: 'subscription',
-            success_url: `${user_type === 'new_client'? `http://localhost:5173/register?success=true` : user_type === 'logged_client'? 'http://localhost:5173/navbar/setting?success=true' : 'http://localhost:5173/login?success=true'}`,
-            cancel_url: `${user_type === 'new_client'? 'http://localhost:5173/register?canceled=true' : user_type === 'logged_client'? 'http://localhost:5173/navbar/setting?canceled=true' : 'http://localhost:5173/login?canceled=true'}`,
+            success_url: `${user_type === 'new_client'? `https://www.chatbudy.io/register?success=true` : user_type === 'logged_client'? 'https://www.chatbudy.io/navbar/setting?success=true' : 'https://www.chatbudy.io/login?success=true'}`,
+            cancel_url: `${user_type === 'new_client'? 'https://www.chatbudy.io/register?canceled=true' : user_type === 'logged_client'? 'https://www.chatbudy.io/navbar/setting?canceled=true' : 'https://www.chatbudy.io/login?canceled=true'}`,
             automatic_tax: { enabled: true },
             customer_update: {
                 address: 'auto',
@@ -62,7 +62,7 @@ const startPortalSession = asyncHandler( async(req, res, next) => {
         // start portal session
         const session = await stripeInstance.billingPortal.sessions.create({
             customer: customer_stripe_id,
-            return_url: 'http://localhost:5173/navbar/setting?portal=true',
+            return_url: 'https://www.chatbudy.io/navbar/setting?portal=true',
         });
         // return the url
         res.send({ url: session.url })
