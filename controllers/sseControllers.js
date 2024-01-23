@@ -40,8 +40,6 @@ const connectionSSE = asyncHandler(async(req,res,next) => {
     try{
         if(req.header("Origin") === "https://www.chatbudy.io" || req.header("Origin") === "https://chatbudy.io" || req.header("Origin") === "http://localhost:5173"){
             origin = req.header("Origin");
-        } else {
-            return;
         }
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
