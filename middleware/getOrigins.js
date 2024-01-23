@@ -6,10 +6,6 @@ const AllowedDomainVerification = async() => {
     try{ 
         const domains = await Widget.distinct('domain');
         domains.push('https://www.chatbudy.io');
-        domains.push('http://localhost:3000');
-        domains.push('http://10.0.0.78:3000');
-        domains.push('http://localhost:5173');
-        domains.push('http://10.0.0.123:5173');
         domains.push('https://chatbudy-api.onrender.com')
         return domains
     } catch(err){

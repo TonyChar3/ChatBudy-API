@@ -36,11 +36,17 @@ const authSSEconnection = asyncHandler(async(req,res,next) => {
 //@route GET /connection/sse
 //@access PRIVATE
 const connectionSSE = asyncHandler(async(req,res,next) => {
+    let origin;
     try{
+        if(req.header("Origin") === "https://www.chatbudy.io" || req.header("Origin") === "https://chatbudy.io" || req.header("Origin") === "http://localhost:5173"){
+            origin = req.header("Origin");
+        } else {
+            return;
+        }
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
-        res.setHeader('Access-Control-Allow-Origin', 'https://www.chatbudy.io');
+        res.setHeader('Access-Control-Allow-Origin', origin);
                     
         res.write('SSE connection started\n\n');
 
