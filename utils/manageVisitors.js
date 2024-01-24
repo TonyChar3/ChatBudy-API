@@ -274,6 +274,7 @@ const visitorSSEAuth = async(req) => {
       if(!decoded){
         return {}
       }
+      console.log("SSE decoded: ", decoded);
       return decoded
   } catch(err){
     console.log('visitorSSEAuth() at manageVisitors.js in utils: SSE authentication failed. ', err.stack);
