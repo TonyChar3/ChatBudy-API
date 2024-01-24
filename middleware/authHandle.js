@@ -64,19 +64,15 @@ const VerifyUserHash = async(req,res) => {
  */
 const VerifyWidgetToken = async(req,res) => {
     try {
-        // get the widget id
-        const verify_hash = await VerifyUserHash(req,res);
-        if( verify_hash) {
-            // get the token from the redis cache 
-            const { user_hash } = req.params 
-            // decode the jwt token from the cache
-            const token = await redis_widget_tokens.get(user_hash);
-            const decode_token = await decodeJWT(JSON.parse(token), 'Visitor');
-            if(Object.keys(decode_token).length === 0){
-                throw new Error('Invalid auth token');
-            }
-            return decode_token
+        // get the token from the redis cache 
+        const visitor_token = req.headers.authorization.split(" ")[1];
+        // decode the jwt token from the cache
+        const token = await redis_widget_tokens.get(visitor_token);
+        const decode_token = await decodeJWT(JSON.parse(token), 'Visitor');
+        if(Object.keys(decode_token).length === 0){
+            throw new Error('Invalid auth token');
         }
+        return decode_token
     } catch(err){
         res.status(401).json({
             title: 'UNAUTHORIZED',

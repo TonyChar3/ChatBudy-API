@@ -147,7 +147,7 @@ const createVisitor = asyncHandler(async(req,res,next) => {
         }
 
         // TODO: Uncomment this for production
-        await redis_widget_tokens.set(visitor_hash, JSON.stringify(generate_token), 'EX', 3600);
+        await redis_widget_tokens.set(visitor_hash, JSON.stringify(generate_token.jwtToken), 'EX', 3600);
         res.send({ visitor_hash: visitor_hash });
     } catch(err) {
         next({ 
@@ -261,7 +261,6 @@ const sendEmail = asyncHandler( async(req,res,next) => {
         }
         res.status(200).send({ success: true, msg: 'email sent' });
     } catch(err){
-        console.log(err)
         next({ 
             statusCode: custom_statusCode || 500, 
             title: custom_err_title, 
