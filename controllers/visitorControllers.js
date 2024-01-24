@@ -45,7 +45,7 @@ const visitorInfoFetch = asyncHandler( async(req,res,next) => {
 //@access PRIVATE
 const createVisitor = asyncHandler(async(req,res,next) => {
     try{
-        console.log("Create visitor: ",req.headers("Origin"))
+        console.log("Create visitor: ",req.header("Origin"))
         // verify the user hash
         const verify = await VerifyUserHash(req,res);
         if(!verify){
