@@ -66,7 +66,7 @@ const VerifyWidgetToken = async(req,res) => {
     try {
         // get the widget id
         const verify_hash = await VerifyUserHash(req,res);
-        if( verify_hash){
+        if( verify_hash) {
             // get the token from the redis cache 
             const { user_hash } = req.params 
             // decode the jwt token from the cache

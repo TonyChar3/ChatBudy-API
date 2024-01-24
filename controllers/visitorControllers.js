@@ -12,6 +12,7 @@ import { sendAdminSSEInfo } from '../utils/manageSSE.js';
 import { redis_chatroom } from '../server.js';
 import { send } from '../utils/manageVisitors.js';
 import { redis_widget_tokens } from '../server.js';
+import { uniqueUserHash } from '../utils/manageVisitors.js';
 dotenv.config();
 let custom_statusCode;
 let custom_err_message;
@@ -53,6 +54,7 @@ const createVisitor = asyncHandler(async(req,res,next) => {
         }
         const { user_hash } = req.params 
         const { isoCode, browser } = req.body;
+        const visitor_hash = await uniqueUserHash();
         const visitor_uid = generateRandomID(user_hash);
         const visitor_browser = getVisitorBrowser(browser);
         const [visitor, user, widget] = await Promise.all([
@@ -145,8 +147,8 @@ const createVisitor = asyncHandler(async(req,res,next) => {
         }
 
         // TODO: Uncomment this for production
-        await redis_widget_tokens.set(user_hash, JSON.stringify(generate_token), 'EX', 3600);
-        res.send({ message: 'new visitor '});
+        await redis_widget_tokens.set(visitor_hash, JSON.stringify(generate_token), 'EX', 3600);
+        res.send({ visitor_hash: visitor_hash });
     } catch(err) {
         next({ 
             statusCode: custom_statusCode || 500, 
