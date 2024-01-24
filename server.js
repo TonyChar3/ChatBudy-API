@@ -78,6 +78,11 @@ const redis_nonce_storage = redis.createClient({
     url: process.env.REDIS_URL_CONNECT,
     database: 2
 });
+// cache widget tokens for a secure access
+const redis_widget_tokens = redis.createClient({
+    url: process.env.REDIS_URL_CONNECT,
+    database: 7
+});
 
 // Set up Express
 const app = express();
@@ -194,7 +199,13 @@ const server = app.listen(port, async() => {
     .catch((err) => {
         console.log('Redis nonce storage client ERROR: ', err)
     });
+    redis_widget_tokens.connect().then(() => {
+        console.log('Redis widget token storage is connected')
+    })
+    .catch((err) => {
+        console.log('Redis widget token storage client ERROR: ', err)
+    });
 });
 
-export { redis_rate_limit, redis_chatroom, redis_nonce_storage, shopify, config_nodemailer, stripeInstance }
+export { redis_rate_limit, redis_chatroom, redis_nonce_storage, redis_widget_tokens, shopify, config_nodemailer, stripeInstance }
 

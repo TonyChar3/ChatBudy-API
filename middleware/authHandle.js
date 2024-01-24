@@ -2,6 +2,7 @@ import admin from 'firebase-admin';
 import User from '../models/userModels.js';
 import Widget from '../models/widgetModels.js';
 import { decodeJWT } from '../utils/manageVisitors.js';
+import { redis_widget_tokens } from '../server.js';
 /**
  * Verify the token and return its content for use
  */
@@ -30,27 +31,6 @@ const VerifyAccessWidgetStyle = async(req,res) => {
     return decode_token
 }
 /**
- * Verify visitor widget token
- */
-const VerifyWidgetToken = async(req,res) => {
-    try{
-        // const token = req.headers.authorization.split(" ")[1]
-        const token = req.cookies.visitor_jwt.jwtToken;
-        const decode_token = await decodeJWT(token, 'Visitor');
-        if(Object.keys(decode_token).length === 0){
-            throw new Error('Invalid auth token');
-        }
-        return decode_token
-    } catch(err){
-        res.status(401).json({
-            title: 'UNAUTHORIZED',
-            message: 'Invalid auth token',
-            stackTrace: err.stack
-        });
-        return false;
-    }
-}
-/**
  * Verify the User hash to give access to widget routes
  */
 const VerifyUserHash = async(req,res) => {
@@ -74,6 +54,33 @@ const VerifyUserHash = async(req,res) => {
         res.status(401).json({
             title: 'UNAUTHORIZED',
             message: 'Invalid user hash',
+            stackTrace: err.stack
+        });
+        return false;
+    }
+}
+/**
+ * Verify visitor widget token
+ */
+const VerifyWidgetToken = async(req,res) => {
+    try {
+        // get the widget id
+        const verify_hash = await VerifyUserHash(req,res);
+        if( verify_hash){
+            // get the token from the redis cache 
+            const { user_hash } = req.params 
+            // decode the jwt token from the cache
+            const token = await redis_widget_tokens.get(user_hash);
+            const decode_token = await decodeJWT(JSON.parse(token), 'Visitor');
+            if(Object.keys(decode_token).length === 0){
+                throw new Error('Invalid auth token');
+            }
+            return decode_token
+        }
+    } catch(err){
+        res.status(401).json({
+            title: 'UNAUTHORIZED',
+            message: 'Invalid auth token',
             stackTrace: err.stack
         });
         return false;

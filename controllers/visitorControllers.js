@@ -11,6 +11,7 @@ import Widget from '../models/widgetModels.js';
 import { sendAdminSSEInfo } from '../utils/manageSSE.js';
 import { redis_chatroom } from '../server.js';
 import { send } from '../utils/manageVisitors.js';
+import { redis_widget_tokens } from '../server.js';
 dotenv.config();
 let custom_statusCode;
 let custom_err_message;
@@ -45,8 +46,6 @@ const visitorInfoFetch = asyncHandler( async(req,res,next) => {
 //@access PRIVATE
 const createVisitor = asyncHandler(async(req,res,next) => {
     try{
-        const domain = req.header("Origin").split("/")[2];
-        console.log("Create visitor: ", domain)
         // verify the user hash
         const verify = await VerifyUserHash(req,res);
         if(!verify){
@@ -139,13 +138,14 @@ const createVisitor = asyncHandler(async(req,res,next) => {
         }
         // generate a new JWT token for the visitor
         const generate_token = generateJWT(visitor_uid);
-        if(generate_token.error){
+        if(generate_token.error) {
             custom_statusCode = 500;
             custom_err_message = 'Unable to generate a new visitor auth token';
             custom_err_title = 'SERVER ERROR';
         }
+
         // TODO: Uncomment this for production
-        res.status(200).cookie('visitor_jwt', generate_token, { maxAge: 48 * 60 * 60 * 1000, domain: `${domain}`, path:'/', httpOnly: true, sameSite: 'none', secure: true })
+        await redis_widget_tokens.set(user_hash, JSON.stringify(generate_token), 'EX', 3600);
         res.send({ message: 'new visitor '});
     } catch(err) {
         next({ 
