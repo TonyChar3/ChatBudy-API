@@ -7,6 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { sendAdminFreshUpdatedInfo, sendWidgetVisitorNotifications } from './manageSSE.js';
 import { config_nodemailer } from '../server.js';
+import { redis_widget_tokens } from '../server.js';
 import nodemailer from 'nodemailer';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -264,15 +265,12 @@ const checkRequestCache = async(redis_client, obj_email) => {
  */
 const visitorSSEAuth = async(req) => {
   try{
-      // decode the cookie and validate the JWT
-      //TODO: Uncomment this for production to use httpOnly cookies
-      // const cookie_value = req.cookies
-      const cookie_value = req.cookies.visitor_jwt.jwtToken;
-      if(!cookie_value){
-        return
-      }
+      // get the token from the redis cache 
+      const visitor_token = req.headers.authorization.split(" ")[1];
+      // decode the jwt token from the cache
+      const token = await redis_widget_tokens.get(visitor_token);
       // verify and decode the JWT token in the cookie
-      const decoded = await decodeJWT(cookie_value, 'Visitor');
+      const decoded = await decodeJWT(token, 'Visitor');
       if(!decoded){
         return {}
       }
