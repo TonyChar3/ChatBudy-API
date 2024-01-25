@@ -309,7 +309,7 @@ const sendVisitorNotification = async(user_access, visitor_id) => {
     // get the array of notification
     const visitor_index = visitor_collection.visitor.findIndex(visitor => visitor._id === visitor_id.toString());
     if(visitor_index === -1){
-      return
+      return;
     }
     // send the notification
     const visitor_notifications = visitor_collection.visitor[visitor_index].notifications
