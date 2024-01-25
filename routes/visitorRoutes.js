@@ -1,6 +1,5 @@
 import express from 'express';
 import { visitorInfoFetch, createVisitor, deleteVisitor, sendEmail } from '../controllers/visitorControllers.js';
-import { VerifyUserHash } from '../middleware/authHandle.js';
 
 const router = express.Router();
 

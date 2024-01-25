@@ -104,6 +104,13 @@ const getVisitorBrowser = (browser_info) => {
 
     let browserName;
     let browserVersion;
+
+    if (typeof browser_info !== 'string') {
+      return {
+        browserName: 'Unknown',
+        browserVersion: 'Unknown',
+      };
+    }
   
     switch (true) {
       case userAgent.indexOf("Firefox") !== -1:
@@ -274,7 +281,6 @@ const visitorSSEAuth = async(req) => {
       if(!decoded){
         return {}
       }
-      console.log("SSE decoded: ", decoded);
       return decoded
   } catch(err){
     console.log('visitorSSEAuth() at manageVisitors.js in utils: SSE authentication failed. ', err.stack);
