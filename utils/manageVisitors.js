@@ -283,7 +283,6 @@ const visitorSSEAuth = async(req) => {
       const token = await redis_widget_tokens.get(visitor_token);
       // verify and decode the JWT token in the cookie
       const decoded = await decodeJWT(JSON.parse(token), 'Visitor');
-      console.log(decoded);
       if(!decoded){
         return {}
       }

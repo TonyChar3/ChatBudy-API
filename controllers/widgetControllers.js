@@ -96,7 +96,6 @@ const widgetSSEAuth = asyncHandler( async(req,res,next) => {
             id: auth_visitor.id,
             user_access: req.body.user_hash
         }
-        console.log("Connect sse", auth_visitor);
         res.status(201).json({ sse_link: process.env.WIDGET_SSE_CONNECTION_LINK });
     } catch(err){
         next({ 
