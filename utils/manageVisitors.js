@@ -123,7 +123,12 @@ const getVisitorBrowser = (browser_info) => {
         break;
       case userAgent.indexOf("Safari") !== -1:
         browserName = "Safari";
-        browserVersion = userAgent.match(/Version\/([\d.]+)/)[1];
+        const safariMatch = userAgent.match(/Version\/([\d.]+)/);
+        if (safariMatch && safariMatch.length >= 2) {
+          browserVersion = safariMatch[1];
+        } else {
+            browserVersion = "Unknown";
+        }
         break;
       case userAgent.indexOf("MSIE") !== -1 || userAgent.indexOf("Trident/") !== -1:
         browserName = "Internet Explorer";
