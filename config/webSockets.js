@@ -32,7 +32,7 @@ export const webSocketServerSetUp = (redis_client, server) => {
     try {
       const jwt_connect = new URL(
         req.url,
-        "http://localhost:8080"
+        "https://chatbudy-api.onrender.com"
       ).searchParams.get("id");
       const decode_token = await decodeJWT(jwt_connect, "WS");
       // Decode the sent JWT and check if the data inside is valid
