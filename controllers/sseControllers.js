@@ -40,7 +40,7 @@ const connectionSSE = asyncHandler(async (req, res, next) => {
   try {
     if (
       req.header("Origin") === "https://www.chatbudy-io.tony-char3" ||
-      req.header("Origin") === "https://chatbudy-io.tony-char3" ||
+      req.header("Origin") === "https://chatbudy-io.tony-char3.com" ||
       req.header("Origin") === "http://localhost:5173"
     ) {
       origin = req.header("Origin");
